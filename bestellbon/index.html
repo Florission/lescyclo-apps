@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="de">
+<head>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Bestellbon"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="store.js" data-app="bestellbon"></script><script src="shim.js"></script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bestellbon Le's Cyclo</title>
+<style>
+:root{
+  --bg:#f3f5f1; --surface:#fff; --fg:#1d2420; --muted:#5f6b63; --line:#d9dfd8;
+  --accent:#2f6b45; --accent-fg:#fff; --accent-soft:#e3eee6; --danger:#b3392f; --danger-soft:#f6e3e1; --blue-soft:#e3e9f8;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-num:ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141a16; --surface:#1c241f; --fg:#e7ece8; --muted:#9aa79f; --line:#2f3a33;
+  --accent:#6fbf8b; --accent-fg:#0f1a13; --accent-soft:#223429; --danger:#ef7a6f; --danger-soft:#3a2321; --blue-soft:#232c45; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;padding:14px 16px 32px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{margin:2px 0 0;font-size:24px}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{border:none;background:transparent;min-height:40px}
+.tabs button.on{background:var(--accent);color:var(--accent-fg);font-weight:600}
+button{font:inherit;cursor:pointer;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 14px;min-height:44px}
+button:disabled{opacity:.45}
+.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.danger{color:var(--danger)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:14px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{margin:0;font-size:17px}
+.sticky{position:sticky;top:10px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--muted)}
+input,select{font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;min-height:46px;width:100%}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{min-height:40px;padding:6px 14px;font-size:15px}
+.seg button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;min-height:84px;padding:10px 12px;background:var(--bg)}
+.item .nm{font-weight:600;line-height:1.2}
+.item .nr{font-family:var(--font-num);color:var(--muted);font-size:13px;margin-right:4px}
+.item .pr{font-family:var(--font-num);font-size:14px;color:var(--muted);margin-top:auto}
+.item:active{background:var(--accent-soft)}
+.lines{display:flex;flex-direction:column;gap:6px}
+.ln{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:6px}
+.qty{display:flex;align-items:center;gap:4px}
+.qty button{min-height:38px;min-width:38px;padding:0;font-size:18px}
+.qty b{font-family:var(--font-num);min-width:1.6em;text-align:center}
+.ln .t{font-weight:600;line-height:1.2}
+.ln .sub{font-size:13px;color:var(--muted)}
+.ln .p{font-family:var(--font-num);white-space:nowrap;text-align:right}
+.ln .noteBtn{grid-column:2/4;justify-self:start;min-height:30px;padding:2px 8px;font-size:13px;color:var(--muted);border-style:dashed}
+.ln input{grid-column:2/4;min-height:38px;font-size:15px}
+.sum{display:flex;justify-content:space-between;align-items:baseline;font-size:22px;font-weight:700;border-top:2px solid var(--fg);padding-top:10px}
+.sum span:last-child{font-family:var(--font-num)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .primary{flex:1}
+.msg{font-size:14px;min-height:1.2em}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--accent)}
+.empty{padding:28px 8px;text-align:center;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.dialog{max-width:520px;width:100%}
+.big{min-height:56px;font-size:17px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px;border-bottom:1.5px solid var(--fg)}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.num{font-family:var(--font-num);text-align:right;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.ed input{min-height:40px;font-size:15px;padding:6px 8px}
+.ed td button{min-height:38px;padding:4px 10px}
+pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-radius:var(--r);padding:10px;overflow-x:auto;margin:0;white-space:pre}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="eyebrow">Le's Cyclo</div><h1>Bestellbon</h1></div>
+    <div class="tabs">
+      <button data-v="bestellen" class="on">Bestellen</button>
+      <button data-v="bons">Letzte Bons</button>
+      <button data-v="karte">Speisekarte</button>
+      <button data-v="einst">⚙</button>
+    </div>
+  </header>
+
+  <!-- BESTELLEN -->
+  <section id="v-bestellen">
+    <div class="grid">
+      <div class="panel">
+        <div class="seg" id="cats"></div>
+        <div class="items" id="items"></div>
+      </div>
+      <div class="panel sticky">
+        <label>Tisch / Name (optional)<input id="oLabel" placeholder="z. B. Tisch 5 oder Abholung Müller"></label>
+        <div class="lines" id="lines"></div>
+        <div class="sum"><span>Summe</span><span id="sum">0,00 €</span></div>
+        <div class="actions">
+          <button id="clear" class="danger">Leeren</button>
+          <button id="print" class="primary big">Drucken</button>
+        </div>
+        <div class="msg" id="msg" role="status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LETZTE BONS -->
+  <section id="v-bons" hidden>
+    <div class="panel">
+      <h2>Letzte Bons</h2>
+      <p class="note">Die letzten 50 gedruckten Bestellungen. „Übernehmen“ lädt sie zum Ändern in die Bestellung.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Zeit</th><th>Tisch / Name</th><th>Positionen</th><th class="num">Summe</th><th></th></tr></thead>
+        <tbody id="hist"></tbody>
+      </table></div>
+      <div class="msg" id="hMsg"></div>
+    </div>
+  </section>
+
+  <!-- SPEISEKARTE -->
+  <section id="v-karte" hidden>
+    <div class="panel">
+      <div class="seg" id="kCats"></div>
+      <div class="actions">
+        <input id="kCatName" style="max-width:280px" aria-label="Name der Kategorie">
+        <button id="kCatRen">Umbenennen</button>
+        <button id="kCatAdd">+ Kategorie</button>
+        <button id="kCatDel" class="danger">Kategorie löschen</button>
+      </div>
+      <p class="note"><b>Preise:</b> einfach „14,90“ – oder bei Größen „0,2l 3,90 | 0,4l 6,20“. <b>Auswahl:</b> Sorten oder Varianten mit Komma getrennt, z. B. „still, sprudelig“ – wird beim Antippen abgefragt und auf den Bon gedruckt. Änderungen werden sofort gespeichert.</p>
+      <div class="tablewrap ed"><table>
+        <thead><tr><th style="width:4.5em">Nr.</th><th>Name</th><th style="width:22%">Preise</th><th style="width:26%">Auswahl</th><th style="width:9.5em"></th></tr></thead>
+        <tbody id="kItems"></tbody>
+      </table></div>
+      <div class="actions"><button id="kAdd">+ Gericht</button></div>
+      <div class="msg" id="kMsg"></div>
+    </div>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section id="v-einst" hidden>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+      <form class="panel" id="sForm" autocomplete="off">
+        <h2>Bondrucker</h2>
+        <p class="note">IP-Adresse steht auf dem Statusbon: Drucker aus, Feed-Taste gedrückt halten, einschalten. Tablet und Drucker müssen im selben Netz sein.</p>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+          <label>IP-Adresse<input id="sIp" inputmode="decimal" placeholder="z. B. 192.168.1.50"></label>
+          <label>Port<input id="sPort" inputmode="numeric" placeholder="9100"></label>
+        </div>
+        <label>Papierbreite<select id="sWidth"><option value="48">80 mm (48 Zeichen)</option><option value="42">80 mm (42 Zeichen)</option><option value="32">58 mm (32 Zeichen)</option></select></label>
+        <label>Kopfzeile<input id="sHead"></label>
+        <label>Fußzeile<input id="sFoot"></label>
+        <div class="actions"><button type="button" id="sTest">Testdruck</button><button type="submit" class="primary">Speichern</button></div>
+        <div class="msg" id="sMsg"></div>
+      </form>
+      <div class="panel">
+        <h2>Vorschau des Bons</h2>
+        <pre class="bon" id="preview"></pre>
+        <h2 style="margin-top:8px">Speisekarte</h2>
+        <p class="note">Setzt die Speisekarte auf den Stand der Word-Datei vom Oktober 2026 zurück. Eigene Änderungen gehen dabei verloren.</p>
+        <div class="actions"><button id="kReset" class="danger">Speisekarte zurücksetzen</button></div>
+        <div class="msg" id="rMsg"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="chooser" hidden>
+  <div class="panel dialog">
+    <h2 id="chTitle"></h2>
+    <div id="chVarL"><div class="note" style="margin-bottom:6px">Größe</div><div class="seg" id="chVar"></div></div>
+    <div id="chOptL"><div class="note" style="margin-bottom:6px">Auswahl</div><div class="seg" id="chOpt"></div></div>
+    <div class="actions"><button id="chCancel">Abbrechen</button><button id="chAdd" class="primary big">Hinzufügen</button></div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const DEFAULT_MENU=[{"name":"Softdrinks","items":[{"nr":"","name":"Fritz","desc":"","variants":[{"label":"0,2l","price":350}],"options":["Kola","Kola zuckerfrei","Zitrone","Orange","MischMasch","Rhabarberschorle"]},{"nr":"","name":"Nektar","desc":"","variants":[{"label":"0,2l","price":390},{"label":"0,4l","price":620}],"options":["Mango","Maracuja","Apfel","Mango Schorle","Maracuja Schorle","Apfel Schorle"]},{"nr":"","name":"Wasser Purezza","desc":"","variants":[{"label":"0,3l","price":390},{"label":"0,75l","price":650}],"options":["still","sprudelig"]}]},{"name":"Homemade & Smoothies","items":[{"nr":"","name":"Da Chanh 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Green Ice Tea 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Coriander Mule (virgin) 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Red Sensation 0,5l","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"","name":"Gold Buddha 0,4l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Good Morning Vietnam 0,4l","desc":"","variants":[{"label":"","price":590}],"options":[]}]},{"name":"Kaffee & Tee","items":[{"nr":"","name":"Ca Phe Den","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Ca Phe Sua","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Ca Phe Sua Da","desc":"","variants":[{"label":"","price":520}],"options":[]},{"nr":"","name":"Tra Gung","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Sen","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Xa","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Chanh Xa","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tra Ky Tu","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Cung Dinh Hue","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Hoa Hong","desc":"","variants":[{"label":"","price":490}],"options":[]}]},{"name":"Bier, Wein & Bar","items":[{"nr":"","name":"Tiger Bier vom Fass","desc":"","variants":[{"label":"0,3l","price":450},{"label":"0,5l","price":590}],"options":[]},{"nr":"","name":"Erdinger Weizen alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tannenzäpfle Pils alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Riesling Plaisir 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Sauvignon Damaszenerstahl 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Rosé Federstahl 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Rouge Terres de Safres 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Cyclo's Delight","desc":"","variants":[{"label":"","price":990}],"options":[]},{"nr":"","name":"Cyclo's Mule","desc":"","variants":[{"label":"","price":1190}],"options":[]},{"nr":"","name":"Hanoi Mule","desc":"","variants":[{"label":"","price":1150}],"options":[]},{"nr":"","name":"Dragon's Gin & Tonic","desc":"","variants":[{"label":"","price":1390}],"options":[]},{"nr":"","name":"Rhabarber Fritz 43","desc":"","variants":[{"label":"","price":1090}],"options":[]},{"nr":"","name":"Nep Moi","desc":"","variants":[{"label":"","price":450}],"options":[]}]},{"name":"Vorspeisen","items":[{"nr":"1","name":"Goi Cuon","desc":"","variants":[{"label":"","price":690}],"options":["Original","vegan"]},{"nr":"2","name":"Ha Gao Tom","desc":"","variants":[{"label":"","price":590}],"options":[]},{"nr":"3","name":"Com Chien (vegan)","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"4","name":"Com Chien Tom","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"5","name":"Dim Sum","desc":"","variants":[{"label":"","price":850}],"options":["Original","vegan"]},{"nr":"6","name":"Nom Xoai Thit Bo","desc":"","variants":[{"label":"","price":990}],"options":["Original","vegan"]}]},{"name":"Hauptspeisen","items":[{"nr":"7","name":"Pho","desc":"","variants":[{"label":"","price":1490}],"options":["Bo (Rind)","Ga (Huhn)","Chay (Tofu)","Chay vegan"]},{"nr":"8","name":"Pho Xao","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"9","name":"Bun Nem Ran Hanoi","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"10","name":"Banh Bao Burger","desc":"","variants":[{"label":"","price":1690}],"options":["Original","vegan"]},{"nr":"11","name":"Ga Cuon La Chanh","desc":"","variants":[{"label":"","price":1490}],"options":[]},{"nr":"12","name":"Com Cari Sua Dua","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"13","name":"Com Thit Lon Xa Xiu","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"14","name":"Bun Cha Thap Cam","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"15","name":"Ca Hoi Nuong","desc":"","variants":[{"label":"","price":2090}],"options":[]},{"nr":"16","name":"Vit Chay (vegan)","desc":"","variants":[{"label":"","price":1790}],"options":[]},{"nr":"17","name":"Die Vielfalt Vietnams","desc":"","variants":[{"label":"","price":3890}],"options":["Original","vegan"]}]},{"name":"Vegan Bowls & Kids","items":[{"nr":"18","name":"Buddha Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"19","name":"Shrimp\"less\" Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"20","name":"Cyclo's Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"21","name":"Monk Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"22","name":"Kids Menü","desc":"","variants":[{"label":"","price":990}],"options":["Original","vegan"]}]},{"name":"Nachspeisen","items":[{"nr":"23","name":"Banh Ran","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"24","name":"Mochi","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"25","name":"Chuoi Nep","desc":"","variants":[{"label":"","price":590}],"options":[]}]}];
+const A=window.Android||{
+  load:k=>{try{return localStorage.getItem("bon_"+k)||"";}catch(e){return "";}},
+  save:(k,v)=>{try{localStorage.setItem("bon_"+k,v);return true;}catch(e){return false;}},
+  print:(id,h,p,b)=>{console.log("PRINT",h,p,b.length);setTimeout(()=>window.onPrinted(id,!!h,h?"":"keine IP"),200);}
+};
+const load=(k,d)=>{try{const s=A.load(k);return s?JSON.parse(s):d;}catch(e){return d;}};
+const save=(k,v)=>A.save(k,JSON.stringify(v));
+const clone=o=>JSON.parse(JSON.stringify(o));
+let menu=load("speisekarte",null)||clone(DEFAULT_MENU);
+let cfg=Object.assign({ip:"",port:9100,width:48,head:"Le's Cyclo",foot:"Keine Rechnung - kein Kassenbeleg"},load("einstellungen",{}));
+let hist=load("bons",[]);
+let order=load("offen",{label:"",lines:[]});
+
+const pad=n=>String(n).padStart(2,"0");
+const eur=c=>(c/100).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stamp=d=>`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function say(t,k,el){const m=el||$("msg");m.textContent=t;m.className="msg "+(k||"");}
+const saveOrder=()=>save("offen",order);
+const saveMenu=()=>{if(!save("speisekarte",menu))say("Speichern hat nicht geklappt!","err",$("kMsg"));};
+
+/* ---------- Ansichten ---------- */
+let view="bestellen";
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+function show(v){view=v;document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  ["bestellen","bons","karte","einst"].forEach(x=>$("v-"+x).hidden=x!==v);
+  if(v==="bestellen")renderOrder(); if(v==="bons")renderHist(); if(v==="karte")renderEditor(); if(v==="einst")renderSettings();}
+window.onBack=()=>{if(!$("chooser").hidden)$("chooser").hidden=true;else if(view!=="bestellen")show("bestellen");};
+
+/* ---------- Bestellen ---------- */
+let cat=0;
+function priceText(it){return it.variants.map(v=>(v.label?v.label+" ":"")+eur(v.price)).join(" · ");}
+function renderMenu(){
+  if(cat>=menu.length)cat=0;
+  const cb=$("cats");cb.textContent="";
+  menu.forEach((c,i)=>{const b=document.createElement("button");b.textContent=c.name;if(i===cat)b.classList.add("on");b.onclick=()=>{cat=i;renderMenu();};cb.append(b);});
+  const ib=$("items");ib.textContent="";
+  const c=menu[cat];if(!c)return;
+  if(!c.items.length)ib.innerHTML=`<div class="empty">Keine Gerichte in dieser Kategorie.</div>`;
+  c.items.forEach(it=>{if(!it.variants.length)return;const b=document.createElement("button");b.className="item";
+    b.innerHTML=`<span class="nm">${it.nr?`<span class="nr">${esc(it.nr)}.</span>`:""}${esc(it.name)}</span><span class="pr">${esc(priceText(it))}</span>`;
+    b.onclick=()=>pick(it);ib.append(b);});
+}
+let chItem=null,chV=0,chO=0;
+function pick(it){
+  if(it.variants.length<=1&&!it.options.length)return addLine(it,0,"");
+  chItem=it;chV=0;chO=0;$("chTitle").textContent=(it.nr?it.nr+". ":"")+it.name;
+  $("chVarL").hidden=it.variants.length<=1;$("chOptL").hidden=!it.options.length;
+  renderChooser();$("chooser").hidden=false;}
+function renderChooser(){const it=chItem;
+  const vb=$("chVar");vb.textContent="";it.variants.forEach((v,i)=>{const b=document.createElement("button");b.className="big";
+    b.textContent=(v.label||"Standard")+" · "+eur(v.price);if(i===chV)b.classList.add("on");
+    b.onclick=()=>{chV=i;if(!it.options.length)return finishPick();renderChooser();};vb.append(b);});
+  const ob=$("chOpt");ob.textContent="";it.options.forEach((o,i)=>{const b=document.createElement("button");b.className="big";b.textContent=o;if(i===chO)b.classList.add("on");
+    b.onclick=()=>{chO=i;if(it.variants.length<=1)return finishPick();renderChooser();};ob.append(b);});}
+function finishPick(){$("chooser").hidden=true;addLine(chItem,chV,chItem.options[chO]||"");}
+$("chAdd").onclick=finishPick;$("chCancel").onclick=()=>{$("chooser").hidden=true;};
+$("chooser").onclick=e=>{if(e.target===$("chooser"))$("chooser").hidden=true;};
+
+function lineName(l){return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(l.option?" · "+l.option:"");}
+function addLine(it,vi,opt){const v=it.variants[vi];
+  const same=order.lines.find(l=>!l.note&&l.name===it.name&&l.nr===it.nr&&l.variant===v.label&&l.option===opt&&l.price===v.price);
+  if(same)same.qty++;else order.lines.push({nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:""});
+  saveOrder();renderOrder();say("");}
+const total=o=>o.lines.reduce((s,l)=>s+l.qty*l.price,0);
+let noteOpen=-1;
+function renderOrder(){
+  renderMenu();$("oLabel").value=order.label||"";
+  const box=$("lines");box.textContent="";
+  if(!order.lines.length)box.innerHTML=`<div class="empty">Noch nichts bestellt. Links Gerichte antippen.</div>`;
+  let focusMe=null;
+  order.lines.forEach((l,i)=>{const d=document.createElement("div");d.className="ln";
+    const q=document.createElement("div");q.className="qty";
+    const m=document.createElement("button");m.textContent=l.qty>1?"−":"×";m.onclick=()=>{if(l.qty>1)l.qty--;else order.lines.splice(i,1);saveOrder();renderOrder();};
+    const n=document.createElement("b");n.textContent=l.qty;
+    const p=document.createElement("button");p.textContent="+";p.onclick=()=>{l.qty++;saveOrder();renderOrder();};
+    q.append(m,n,p);
+    const t=document.createElement("div");t.innerHTML=`<div class="t">${esc(lineName(l))}</div>`+(l.qty>1?`<div class="sub">à ${eur(l.price)}</div>`:"");
+    const pr=document.createElement("div");pr.className="p";pr.textContent=eur(l.qty*l.price);
+    d.append(q,t,pr);
+    if(noteOpen===i){const inp=document.createElement("input");inp.value=l.note;inp.placeholder="Notiz, z. B. ohne Koriander";
+      inp.onchange=()=>{l.note=inp.value.trim();saveOrder();};inp.onblur=()=>{l.note=inp.value.trim();noteOpen=-1;saveOrder();renderOrder();};
+      inp.onkeydown=e=>{if(e.key==="Enter")inp.blur();};d.append(inp);focusMe=inp;}
+    else{const nb=document.createElement("button");nb.className="noteBtn";nb.textContent=l.note?"Notiz: "+l.note:"+ Notiz";nb.onclick=()=>{noteOpen=i;renderOrder();};d.append(nb);}
+    box.append(d);});
+  if(focusMe)focusMe.focus();
+  $("sum").textContent=eur(total(order));$("print").disabled=!order.lines.length;
+}
+$("oLabel").oninput=()=>{order.label=$("oLabel").value;saveOrder();};
+$("clear").onclick=()=>{const b=$("clear");if(!order.lines.length&&!order.label)return;
+  if(b.textContent!=="Wirklich leeren?"){b.textContent="Wirklich leeren?";setTimeout(()=>b.textContent="Leeren",3000);return;}
+  order={label:"",lines:[]};saveOrder();b.textContent="Leeren";renderOrder();say("");};
+
+/* ---------- Bon (ESC/POS) ---------- */
+const CP={"Ç":0x80,"ü":0x81,"é":0x82,"â":0x83,"ä":0x84,"à":0x85,"å":0x86,"ç":0x87,"ê":0x88,"ë":0x89,"è":0x8A,"ï":0x8B,"î":0x8C,"ì":0x8D,"Ä":0x8E,"Å":0x8F,
+  "É":0x90,"æ":0x91,"Æ":0x92,"ô":0x93,"ö":0x94,"ò":0x95,"û":0x96,"ù":0x97,"ÿ":0x98,"Ö":0x99,"Ü":0x9A,"ø":0x9B,"£":0x9C,"Ø":0x9D,"á":0xA0,"í":0xA1,"ó":0xA2,"ú":0xA3,
+  "ñ":0xA4,"Ñ":0xA5,"€":0xD5,"ß":0xE1,"µ":0xE6,"°":0xF8,"·":0xFA,"½":0xAB};
+const REPL={"„":'"',"“":'"',"”":'"',"‚":"'","‘":"'","’":"'","–":"-","—":"-","…":"...","×":"x","−":"-"," ":" "};
+function enc(str){const out=[];for(let ch of String(str)){if(REPL[ch])ch=REPL[ch];
+  const c=ch.charCodeAt(0);if(c<128){out.push(c);continue;}
+  if(CP[ch]!=null){out.push(CP[ch]);continue;}
+  const base=ch.normalize("NFD").replace(/[̀-ͯ]/g,"");
+  if(base&&base.charCodeAt(0)<128){out.push(base.charCodeAt(0));continue;}
+  if(CP[base]!=null){out.push(CP[base]);continue;}out.push(0x3F);}return out;}
+function wrap(text,w){const words=String(text).split(/\s+/);const lines=[];let cur="";
+  for(const wd of words){if(!cur)cur=wd;else if((cur+" "+wd).length<=w)cur+=" "+wd;else{lines.push(cur);cur=wd;}
+    while(cur.length>w){lines.push(cur.slice(0,w));cur=cur.slice(w);}}
+  if(cur)lines.push(cur);return lines;}
+function lr(l,r,w){const lines=wrap(l,w-r.length-1);const last=lines.pop()||"";
+  return [...lines,last+" ".repeat(Math.max(1,w-last.length-r.length))+r];}
+/* liefert Liste von Bausteinen: {t:text, b:bold, s:size(0/1=hoch/2=breit+hoch), a:align(0/1)} */
+function bonBlocks(o,when){const W=parseInt(cfg.width)||48,W2=Math.floor(W/2),bl=[];
+  const add=(t,opt)=>bl.push(Object.assign({t,b:0,s:0,a:0},opt||{}));
+  if(cfg.head)wrap(cfg.head,W2).forEach(x=>add(x,{s:2,a:1,b:1}));
+  add("Bestellübersicht",{a:1});
+  add(stamp(when),{a:1});
+  if(o.label){add("");wrap(o.label,W2).forEach(x=>add(x,{s:2,b:1,a:1}));}
+  add("-".repeat(W));
+  for(const l of o.lines){lr(`${l.qty}x ${lineName(l)}`,eur(l.qty*l.price),W).forEach(x=>add(x));
+    if(l.qty>1)add("   à "+eur(l.price));
+    if(l.note)wrap(l.note,W-5).forEach((x,i)=>add((i?"     ":"   > ")+x,{b:1}));}
+  add("-".repeat(W));
+  lr("SUMME",eur(total(o)),W2).forEach(x=>add(x,{s:2,b:1}));
+  add(`${o.lines.reduce((s,l)=>s+l.qty,0)} Artikel`);
+  if(cfg.foot){add("");wrap(cfg.foot,W).forEach(x=>add(x,{a:1}));}
+  return bl;}
+function bonBytes(o,when){const ESC=0x1b,GS=0x1d,b=[ESC,0x40,ESC,0x74,19];
+  for(const k of bonBlocks(o,when)){b.push(ESC,0x61,k.a,ESC,0x45,k.b,GS,0x21,k.s===2?0x11:k.s===1?0x01:0x00);b.push(...enc(k.t),0x0a);}
+  b.push(ESC,0x61,0,ESC,0x45,0,GS,0x21,0,ESC,0x64,4,GS,0x56,66,0);return b;}
+function bonText(o,when){const W=parseInt(cfg.width)||48;
+  return bonBlocks(o,when).map(k=>{let t=k.s===2?k.t.split("").join(" "):k.t;if(k.a===1)t=" ".repeat(Math.max(0,Math.floor((W-t.length)/2)))+t;return t;}).join("\n");}
+function b64(arr){let s="";for(let i=0;i<arr.length;i+=4096)s+=String.fromCharCode.apply(null,arr.slice(i,i+4096));return btoa(s);}
+
+const pending={};
+function sendPrint(o,when,onDone){
+  if(!cfg.ip)return onDone(false,"Keine Drucker-IP eingetragen (⚙).");
+  const id=String(Date.now())+Math.random();pending[id]=onDone;
+  A.print(id,cfg.ip,parseInt(cfg.port)||9100,b64(bonBytes(o,when)));}
+window.onPrinted=(id,ok,err)=>{const f=pending[id];delete pending[id];if(f)f(ok,err);};
+
+$("print").onclick=()=>{if(!order.lines.length)return;const when=new Date(),snap=clone(order);
+  $("print").disabled=true;say("Wird gedruckt …");
+  sendPrint(snap,when,(ok,err)=>{$("print").disabled=false;
+    if(!ok)return say("Drucken fehlgeschlagen – Drucker an und im WLAN? IP richtig? ("+err+")","err");
+    hist.unshift({at:when.toISOString(),label:snap.label,lines:snap.lines});hist=hist.slice(0,50);save("bons",hist);
+    order={label:"",lines:[]};saveOrder();renderOrder();say(`Gedruckt: ${eur(total(snap))}${snap.label?" – "+snap.label:""}`,"ok");});};
+
+/* ---------- Letzte Bons ---------- */
+function renderHist(){const tb=$("hist");tb.textContent="";say("","",$("hMsg"));
+  if(!hist.length){tb.innerHTML=`<tr><td colspan="5" class="empty">Noch keine Bons gedruckt.</td></tr>`;return;}
+  hist.forEach(h=>{const tr=document.createElement("tr");const d=new Date(h.at);
+    tr.innerHTML=`<td style="white-space:nowrap">${stamp(d)}</td><td>${esc(h.label||"–")}</td><td>${esc(h.lines.map(l=>l.qty+"× "+l.name).join(", "))}</td><td class="num">${eur(total(h))}</td>`;
+    const td=document.createElement("td");td.style.whiteSpace="nowrap";
+    const r=document.createElement("button");r.textContent="Nochmal drucken";
+    r.onclick=()=>{say("Wird gedruckt …","",$("hMsg"));sendPrint(h,new Date(h.at),(ok,err)=>say(ok?"Gedruckt.":"Drucken fehlgeschlagen ("+err+")",ok?"ok":"err",$("hMsg")));};
+    const u=document.createElement("button");u.textContent="Übernehmen";u.style.marginLeft="6px";
+    u.onclick=()=>{order={label:h.label||"",lines:clone(h.lines)};saveOrder();show("bestellen");say("Bon übernommen – ändern und neu drucken.","ok");};
+    td.append(r,u);tr.append(td);tb.append(tr);});}
+
+/* ---------- Speisekarte bearbeiten ---------- */
+let kCat=0;
+const fmtPrices=it=>it.variants.map(v=>(v.label?v.label+" ":"")+(v.price/100).toFixed(2).replace(".",",")).join(" | ");
+function parsePrices(s){const out=[];for(const part of String(s).split("|")){const p=part.trim();if(!p)continue;
+  const m=p.match(/^(.*?)\s*(\d+(?:[.,]\d{1,2})?)\s*€?$/);if(!m)return null;
+  out.push({label:m[1].trim(),price:Math.round(parseFloat(m[2].replace(",","."))*100)});}return out;}
+function renderEditor(){if(kCat>=menu.length)kCat=Math.max(0,menu.length-1);
+  const cb=$("kCats");cb.textContent="";
+  menu.forEach((c,i)=>{const b=document.createElement("button");b.textContent=c.name;if(i===kCat)b.classList.add("on");b.onclick=()=>{kCat=i;renderEditor();};cb.append(b);});
+  const c=menu[kCat];$("kCatName").value=c?c.name:"";$("kCatDel").textContent="Kategorie löschen";
+  const tb=$("kItems");tb.textContent="";if(!c)return;
+  c.items.forEach((it,i)=>{const tr=document.createElement("tr");
+    const mk=(val,ph,on)=>{const td=document.createElement("td");const inp=document.createElement("input");inp.value=val;inp.placeholder=ph;inp.onchange=()=>on(inp);td.append(inp);return td;};
+    tr.append(
+      mk(it.nr,"",inp=>{it.nr=inp.value.trim();saveMenu();}),
+      mk(it.name,"Name",inp=>{const v=inp.value.trim();if(!v){inp.value=it.name;return;}it.name=v;saveMenu();}),
+      mk(fmtPrices(it),"14,90",inp=>{const p=parsePrices(inp.value);if(!p||!p.length){say(`Preis für „${it.name}“ nicht verstanden – Beispiel: 14,90 oder 0,2l 3,90 | 0,4l 6,20`,"err",$("kMsg"));inp.value=fmtPrices(it);return;}
+        it.variants=p;inp.value=fmtPrices(it);saveMenu();say("Gespeichert.","ok",$("kMsg"));}),
+      mk(it.options.join(", "),"–",inp=>{it.options=inp.value.split(",").map(x=>x.trim()).filter(Boolean);saveMenu();}));
+    const td=document.createElement("td");td.style.whiteSpace="nowrap";
+    const up=document.createElement("button");up.textContent="↑";up.disabled=i===0;up.onclick=()=>{c.items.splice(i-1,0,c.items.splice(i,1)[0]);saveMenu();renderEditor();};
+    const dn=document.createElement("button");dn.textContent="↓";dn.disabled=i===c.items.length-1;dn.style.marginLeft="4px";dn.onclick=()=>{c.items.splice(i+1,0,c.items.splice(i,1)[0]);saveMenu();renderEditor();};
+    const del=document.createElement("button");del.textContent="✕";del.className="danger";del.style.marginLeft="4px";del.setAttribute("aria-label","Löschen");
+    del.onclick=()=>{if(del.textContent!=="Löschen?"){del.textContent="Löschen?";return;}c.items.splice(i,1);saveMenu();renderEditor();};
+    td.append(up,dn,del);tr.append(td);tb.append(tr);});}
+$("kAdd").onclick=()=>{const c=menu[kCat];if(!c)return;c.items.push({nr:"",name:"Neues Gericht",desc:"",variants:[{label:"",price:0}],options:[]});saveMenu();renderEditor();
+  const rows=$("kItems").querySelectorAll("tr");const inp=rows[rows.length-1].querySelectorAll("input")[1];inp.focus();inp.select();};
+$("kCatRen").onclick=()=>{const c=menu[kCat],n=$("kCatName").value.trim();if(!c||!n)return;c.name=n;saveMenu();renderEditor();};
+$("kCatAdd").onclick=()=>{menu.push({name:"Neue Kategorie",items:[]});kCat=menu.length-1;saveMenu();renderEditor();$("kCatName").focus();$("kCatName").select();};
+$("kCatDel").onclick=()=>{const b=$("kCatDel"),c=menu[kCat];if(!c)return;
+  if(b.textContent!=="Wirklich löschen?"){b.textContent="Wirklich löschen?";say(c.items.length?`Löscht auch ${c.items.length} Gerichte.`:"","err",$("kMsg"));return;}
+  menu.splice(kCat,1);saveMenu();renderEditor();say("Kategorie gelöscht.","ok",$("kMsg"));};
+$("kReset").onclick=()=>{const b=$("kReset");if(b.textContent!=="Wirklich zurücksetzen?"){b.textContent="Wirklich zurücksetzen?";return;}
+  menu=clone(DEFAULT_MENU);saveMenu();b.textContent="Speisekarte zurücksetzen";say("Speisekarte zurückgesetzt.","ok",$("rMsg"));};
+
+/* ---------- Einstellungen ---------- */
+const SAMPLE={label:"Tisch 5",lines:[{nr:"7",name:"Pho",variant:"",option:"Bo (Rind)",price:1490,qty:2,note:"ohne Koriander"},{nr:"",name:"Nektar",variant:"0,4l",option:"Mango",price:620,qty:1,note:""}]};
+function readSettings(){return {ip:$("sIp").value.trim(),port:parseInt($("sPort").value)||9100,width:parseInt($("sWidth").value)||48,head:$("sHead").value.trim(),foot:$("sFoot").value.trim()};}
+function renderSettings(){$("sIp").value=cfg.ip;$("sPort").value=cfg.port;$("sWidth").value=String(cfg.width);$("sHead").value=cfg.head;$("sFoot").value=cfg.foot;
+  $("preview").textContent=bonText(SAMPLE,new Date());say("","",$("sMsg"));say("","",$("rMsg"));$("kReset").textContent="Speisekarte zurücksetzen";}
+["sWidth","sHead","sFoot"].forEach(id=>$(id).addEventListener("input",()=>{const keep=cfg;cfg=Object.assign({},cfg,readSettings());$("preview").textContent=bonText(SAMPLE,new Date());cfg=keep;}));
+$("sForm").addEventListener("submit",e=>{e.preventDefault();cfg=readSettings();if(save("einstellungen",cfg))say("Gespeichert.","ok",$("sMsg"));});
+$("sTest").onclick=()=>{cfg=readSettings();save("einstellungen",cfg);say("Testdruck läuft …","",$("sMsg"));
+  sendPrint(SAMPLE,new Date(),(ok,err)=>say(ok?"Testbon gedruckt.":"Kein Druck: "+err,ok?"ok":"err",$("sMsg")));};
+
+/* ---------- Start ---------- */
+renderOrder();
+</script>
+</body>
+</html>
