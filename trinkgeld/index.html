@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="de">
+<head>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Trinkgeld"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="store.js" data-app="trinkgeld"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" crossorigin="anonymous"></script><script src="shim.js"></script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trinkgeldliste Le's Cyclo</title>
+<style>
+:root{
+  --bg:#f3f5f1; --surface:#ffffff; --fg:#1d2420; --muted:#5f6b63; --line:#d9dfd8;
+  --accent:#2f6b45; --accent-fg:#ffffff; --accent-soft:#e3eee6; --danger:#b3392f;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-num:ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141a16; --surface:#1c241f; --fg:#e7ece8; --muted:#9aa79f; --line:#2f3a33;
+  --accent:#6fbf8b; --accent-fg:#0f1a13; --accent-soft:#223429; --danger:#ef7a6f; color-scheme:dark}
+  td img{filter:invert(1) hue-rotate(180deg)}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;padding:16px 16px 32px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{margin:2px 0 0;font-size:26px;font-weight:700}
+.month{display:flex;align-items:center;gap:6px}
+.month output{font-family:var(--font-num);font-weight:600;font-size:18px;min-width:7em;text-align:center}
+button{font:inherit;cursor:pointer;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 14px;min-height:44px}
+button:disabled{opacity:.45}
+.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.ghost{background:transparent}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{margin:0;font-size:17px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-height:48px;width:100%}
+.amount{font-family:var(--font-num)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:36px;padding:6px 12px;border-radius:999px;font-size:14px;background:var(--accent-soft);border-color:transparent}
+.sigbox{position:relative;border:1.5px dashed var(--line);border-radius:var(--r);background:var(--bg);height:150px;touch-action:none}
+.sigbox canvas{width:100%;height:100%;display:block;border-radius:var(--r)}
+.sigbox .hint{position:absolute;left:12px;bottom:10px;font-size:13px;color:var(--muted);pointer-events:none}
+.sigline{position:absolute;left:12px;right:12px;bottom:32px;border-bottom:1px solid var(--line);pointer-events:none}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .primary{flex:1}
+.msg{font-size:14px;min-height:1.2em}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--accent)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px;border-bottom:1.5px solid var(--fg)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.num,th.num{text-align:right;font-family:var(--font-num);white-space:nowrap}
+td.day{font-family:var(--font-num);width:3.5em}
+td img{height:38px;width:auto;display:block}
+tfoot td{font-weight:700;border-bottom:none;border-top:1.5px solid var(--fg);padding-top:10px}
+.del{min-height:36px;padding:4px 10px;font-size:13px;color:var(--danger)}
+.confirm{display:flex;gap:6px;justify-content:flex-end}
+.empty{padding:28px 8px;text-align:center;color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:10}
+.overlay[hidden]{display:none}
+.dialog{max-width:520px;width:100%}
+.note{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+.status{background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Le's Cyclo GmbH</div>
+      <h1>Trinkgeldbarentnahme</h1>
+    </div>
+    <div class="month">
+      <button class="ghost" id="prevM" aria-label="Vorheriger Monat">‹</button>
+      <output id="monthLabel">–</output>
+      <button class="ghost" id="nextM" aria-label="Nächster Monat">›</button>
+      <button class="ghost" id="setBtn" aria-label="Einstellungen">⚙</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <h2>Neue Entnahme</h2>
+      <div class="row2">
+        <label>Datum<input type="date" id="fDate" required></label>
+        <label>Betrag (€)<input class="amount" id="fAmount" inputmode="decimal" placeholder="0,00" required></label>
+      </div>
+      <label>Name<input id="fName" placeholder="Wer entnimmt?" required></label>
+      <div class="chips" id="chips"></div>
+      <div>
+        <label for="sig" style="margin-bottom:6px">Unterschrift</label>
+        <div class="sigbox"><canvas id="sig"></canvas><div class="sigline"></div><span class="hint" id="sigHint">Hier mit dem Finger unterschreiben</span></div>
+      </div>
+      <div class="actions">
+        <button type="button" id="clearSig">Unterschrift löschen</button>
+        <button type="submit" class="primary" id="save">Eintragen</button>
+      </div>
+      <div class="msg" id="msg" role="status"></div>
+    </form>
+
+    <section class="panel">
+      <div class="foot">
+        <h2 style="color:var(--fg)">Monatsliste</h2>
+        <button id="pdfBtn">PDF speichern</button>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Tag</th><th class="num">Betrag</th><th>Name</th><th>Unterschrift</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+          <tfoot id="tfoot" hidden><tr><td>Summe</td><td class="num" id="sum"></td><td colspan="3" id="count" style="font-weight:500;color:var(--muted)"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="foot"><span id="sendInfo">Die Liste geht am 2. des Folgemonats als PDF an kontakt@lescyclo.de.</span></div>
+    </section>
+  </div>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <form class="panel dialog" id="setForm" autocomplete="off">
+    <h2>Mail-Versand einrichten</h2>
+    <p class="note">Über dieses Postfach verschickt die App am 2. jedes Monats die Liste des Vormonats automatisch. Die Zugangsdaten bleiben nur auf diesem Tablet gespeichert.</p>
+    <div class="status" id="lastStatus" hidden></div>
+    <div class="row2">
+      <label>SMTP-Server<input id="sHost" placeholder="z. B. smtp.ionos.de"></label>
+      <label>Port<input id="sPort" inputmode="numeric" placeholder="465"></label>
+    </div>
+    <label>Benutzername (meist die Mailadresse)<input id="sUser" autocapitalize="off"></label>
+    <label>Passwort<input id="sPass" type="password" autocapitalize="off"></label>
+    <label>Absender (leer = Benutzername)<input id="sFrom" autocapitalize="off"></label>
+    <label>Empfänger<input id="sTo" autocapitalize="off"></label>
+    <p class="note">Port 465 = SSL, 587 = STARTTLS. Bei Gmail ein App-Passwort verwenden.</p>
+    <div class="actions">
+      <button type="button" id="sClose">Schließen</button>
+      <button type="button" id="sTest">Speichern &amp; Testmail</button>
+      <button type="submit" class="primary">Speichern</button>
+    </div>
+    <div class="msg" id="sMsg" role="status"></div>
+  </form>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+/* Brücke zur App – im normalen Browser ein Platzhalter zum Ausprobieren */
+const A = window.Android || (() => { let d=[], s={host:"",port:"465",user:"",from:"",to:"kontakt@lescyclo.de",hasPass:false,status:""};
+  return { list:()=>JSON.stringify(d), add:j=>{const o=JSON.parse(j);o.id=String(Date.now());d.push(o);return o.id;},
+    remove:id=>{d=d.filter(x=>x.id!==id);return true;}, savePdf:m=>window.onMsg("ok:(Vorschau) PDF "+m),
+    getSettings:()=>JSON.stringify(s), saveSettings:j=>{Object.assign(s,JSON.parse(j));}, sendNow:m=>window.onMsg("err:(Vorschau) kein Versand"), exitApp:()=>{} }; })();
+
+const MONTHS=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const pad=n=>String(n).padStart(2,"0");
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
+const eur=c=>(c/100).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const parseCents=s=>{s=String(s).trim().replace(/€/g,"").replace(/\s/g,"");if(!s)return NaN;
+  if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const v=Number(s);return isFinite(v)?Math.round(v*100):NaN;};
+
+let all=[], pendingDelete=null;
+let cur=(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()+1};})();
+const monthKey=()=>`${cur.y}-${pad(cur.m)}`;
+function reload(){ try{ all=JSON.parse(A.list()); }catch(e){ all=[]; } render(); }
+
+/* Unterschrift */
+const cv=$("sig"), ctx=cv.getContext("2d"); let drawing=false, hasInk=false, last=null;
+function sizeCanvas(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.lineWidth=2.4;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#1f3a8a";hasInk=false;$("sigHint").hidden=false;}
+const pt=e=>{const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+cv.addEventListener("pointerdown",e=>{drawing=true;last=pt(e);cv.setPointerCapture(e.pointerId);ctx.beginPath();ctx.arc(last.x,last.y,1.1,0,7);ctx.fillStyle="#1f3a8a";ctx.fill();hasInk=true;$("sigHint").hidden=true;});
+cv.addEventListener("pointermove",e=>{if(!drawing)return;const p=pt(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;});
+["pointerup","pointercancel","pointerleave"].forEach(t=>cv.addEventListener(t,()=>drawing=false));
+$("clearSig").onclick=()=>sizeCanvas();
+window.addEventListener("resize",()=>{if(!hasInk)sizeCanvas();});
+function sigData(){const w=360,h=Math.round(w*cv.height/cv.width),o=document.createElement("canvas");o.width=w;o.height=h;
+  const c=o.getContext("2d");c.fillStyle="#fff";c.fillRect(0,0,w,h);c.drawImage(cv,0,0,w,h);return o.toDataURL("image/jpeg",0.7);}
+
+/* Anzeige */
+function monthRows(){return all.filter(r=>r.monat===monthKey()).sort((a,b)=>a.datum.localeCompare(b.datum)||String(a.erstellt).localeCompare(String(b.erstellt)));}
+function render(){
+  $("monthLabel").textContent=`${MONTHS[cur.m-1]} ${cur.y}`;
+  const rows=monthRows(), tb=$("rows"); tb.textContent="";
+  renderChips();
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="5" class="empty">Noch keine Entnahme für ${MONTHS[cur.m-1]}. Links eintragen und unterschreiben.</td></tr>`;$("tfoot").hidden=true;return;}
+  let sum=0;
+  for(const r of rows){sum+=r.betrag;
+    const tr=document.createElement("tr");
+    const d=document.createElement("td");d.className="day";d.textContent=r.datum.slice(8,10)+".";
+    const b=document.createElement("td");b.className="num";b.textContent=eur(r.betrag);
+    const n=document.createElement("td");n.textContent=r.name;
+    const s=document.createElement("td");if(r.sig){const im=new Image();im.src=r.sig;im.alt="Unterschrift "+r.name;s.append(im);}
+    const a=document.createElement("td");
+    if(pendingDelete===r.id){const w=document.createElement("div");w.className="confirm";
+      const y=document.createElement("button");y.className="del";y.textContent="Ja, löschen";y.onclick=()=>removeRow(r.id);
+      const no=document.createElement("button");no.className="del";no.style.color="var(--fg)";no.textContent="Abbrechen";no.onclick=()=>{pendingDelete=null;render();};
+      w.append(y,no);a.append(w);
+    }else{const x=document.createElement("button");x.className="del";x.textContent="Löschen";x.onclick=()=>{pendingDelete=r.id;render();};a.append(x);}
+    tr.append(d,b,n,s,a);tb.append(tr);}
+  $("sum").textContent=eur(sum);$("count").textContent=`${rows.length} Entnahme${rows.length>1?"n":""}`;$("tfoot").hidden=false;
+}
+function renderChips(){const names=[...new Set(all.slice().sort((a,b)=>String(b.erstellt).localeCompare(String(a.erstellt))).map(r=>r.name))].slice(0,6);
+  const c=$("chips");c.textContent="";names.forEach(nm=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=nm;b.onclick=()=>{$("fName").value=nm;};c.append(b);});}
+$("prevM").onclick=()=>{cur.m--;if(cur.m<1){cur.m=12;cur.y--;}pendingDelete=null;render();};
+$("nextM").onclick=()=>{cur.m++;if(cur.m>12){cur.m=1;cur.y++;}pendingDelete=null;render();};
+function say(t,k,el){const m=el||$("msg");m.textContent=t;m.className="msg "+(k||"");}
+window.onMsg=s=>{const k=s.startsWith("ok:")?"ok":"err";const t=s.slice(s.indexOf(":")+1);say(t,k,$("settings").hidden?$("msg"):$("sMsg"));};
+window.onStatus=()=>loadSettings();
+
+/* Speichern */
+$("form").addEventListener("submit",e=>{
+  e.preventDefault();
+  const datum=$("fDate").value,betrag=parseCents($("fAmount").value),name=$("fName").value.trim();
+  if(!datum)return say("Bitte ein Datum wählen.","err");
+  if(!(betrag>0))return say("Bitte einen gültigen Betrag eingeben, z. B. 69,10.","err");
+  if(!name)return say("Bitte einen Namen eintragen.","err");
+  if(!hasInk)return say("Bitte im Feld unterschreiben.","err");
+  const id=A.add(JSON.stringify({datum,monat:datum.slice(0,7),betrag,name,sig:sigData(),erstellt:new Date().toISOString()}));
+  if(!id)return say("Speichern hat nicht geklappt. Bitte noch einmal tippen.","err");
+  $("fAmount").value="";$("fName").value="";sizeCanvas();
+  const [y,m]=datum.split("-").map(Number);cur={y,m};
+  say(`Eingetragen: ${eur(betrag)} – ${name}`,"ok");reload();
+});
+function removeRow(id){if(A.remove(id)){pendingDelete=null;say("Eintrag gelöscht.","ok");reload();}else say("Löschen hat nicht geklappt.","err");}
+$("pdfBtn").onclick=()=>A.savePdf(monthKey());
+
+/* Einstellungen */
+function loadSettings(){let s={};try{s=JSON.parse(A.getSettings());}catch(e){}
+  $("sHost").value=s.host||"";$("sPort").value=s.port||"465";$("sUser").value=s.user||"";$("sFrom").value=s.from||"";$("sTo").value=s.to||"kontakt@lescyclo.de";
+  $("sPass").value="";$("sPass").placeholder=s.hasPass?"gespeichert – nur zum Ändern ausfüllen":"";
+  $("lastStatus").hidden=!s.status;$("lastStatus").textContent=s.status||"";
+  $("sendInfo").textContent=`Die Liste geht am 2. des Folgemonats als PDF an ${s.to||"kontakt@lescyclo.de"}.`+(s.host&&s.hasPass?"":" – Mail-Versand noch nicht eingerichtet (⚙).");
+  return s;}
+function storeSettings(){A.saveSettings(JSON.stringify({host:$("sHost").value,port:$("sPort").value||"465",user:$("sUser").value,pass:$("sPass").value,from:$("sFrom").value,to:$("sTo").value||"kontakt@lescyclo.de"}));}
+$("setBtn").onclick=()=>{loadSettings();say("","", $("sMsg"));$("settings").hidden=false;};
+$("sClose").onclick=()=>{$("settings").hidden=true;};
+$("setForm").addEventListener("submit",e=>{e.preventDefault();storeSettings();loadSettings();say("Gespeichert.","ok",$("sMsg"));});
+$("sTest").onclick=()=>{storeSettings();const s=loadSettings();if(!s.host||!s.hasPass)return say("Bitte Server und Passwort eintragen.","err",$("sMsg"));
+  say("Testmail wird verschickt …","",$("sMsg"));A.sendNow(monthKey());};
+window.onBack=()=>{if(!$("settings").hidden)$("settings").hidden=true;};
+
+/* Start */
+$("fDate").value=today();sizeCanvas();loadSettings();reload();
+</script>
+</body>
+</html>
