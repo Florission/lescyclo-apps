@@ -146,7 +146,7 @@
     const css = document.createElement('style');
     css.textContent = '#lcBanner{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;' +
       'padding:12px 16px;background:#fff4d6;border-bottom:2px solid #e0b84a;color:#3d2f00;font-weight:600}' +
-      '#lcBanner span{flex:1 1 260px}#lcBanner button{min-height:40px}#setBtn{display:none!important}' +
+      '#lcBanner[hidden]{display:none!important}#lcBanner span{flex:1 1 260px}#lcBanner button{min-height:40px}#setBtn{display:none!important}' +
       '.lcRow{display:flex;gap:8px;flex-wrap:wrap}';
     document.head.appendChild(css);
     banner = document.createElement('div');
