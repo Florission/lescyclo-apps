@@ -3,7 +3,7 @@
   "short_name": "Bestellbon",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "browser",
   "orientation": "any",
   "background_color": "#f3f5f1",
   "theme_color": "#2f6b4f",
