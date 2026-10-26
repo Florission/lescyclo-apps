@@ -296,26 +296,46 @@ function wrap(text,w){const words=String(text).split(/\s+/);const lines=[];let c
 function lr(l,r,w){const lines=wrap(l,w-r.length-1);const last=lines.pop()||"";
   return [...lines,last+" ".repeat(Math.max(1,w-last.length-r.length))+r];}
 /* liefert Liste von Bausteinen: {t:text, b:bold, s:size(0/1=hoch/2=breit+hoch), a:align(0/1)} */
-function bonBlocks(o,when){const W=parseInt(cfg.width)||48,W2=Math.floor(W/2),bl=[];
+Object.assign(CP,{"═":0xCD,"║":0xBA,"╔":0xC9,"╗":0xBB,"╚":0xC8,"╝":0xBC,"╠":0xCC,"╣":0xB9,"─":0xC4});
+const BON_INFO=["Lindenstraße 4 · 14467 Potsdam","Tel. 0331 / 88731277"];
+/* Bon im Kassenbon-Stil mit Doppelrahmen. Bausteine: {t,b,s(0/1/2),a(0/1)} oder {rule:[links,mitte,rechts]} */
+function bonBlocks(o,when){const W=parseInt(cfg.width)||48,IW=W-4,H=Math.floor(IW/2),bl=[];
   const add=(t,opt)=>bl.push(Object.assign({t,b:0,s:0,a:0},opt||{}));
-  if(cfg.head)wrap(cfg.head,W2).forEach(x=>add(x,{s:2,a:1,b:1}));
-  add("Bestellübersicht",{a:1});
-  add(stamp(when),{a:1});
-  if(o.label){add("");wrap(o.label,W2).forEach(x=>add(x,{s:2,b:1,a:1}));}
-  add("-".repeat(W));
-  for(const l of o.lines){lr(`${l.qty}x ${lineName(l)}`,eur(l.qty*l.price),W).forEach(x=>add(x));
+  const rule=(l,m,r)=>bl.push({rule:[l,m,r]});
+  rule("╔","═","╗");add("");
+  if(cfg.head)wrap(cfg.head,H).forEach(x=>add(x,{s:2,a:1,b:1}));
+  BON_INFO.forEach(x=>wrap(x,IW).forEach(y=>add(y,{a:1})));
+  add("");rule("╠","═","╣");
+  lr("Bestellübersicht",stamp(when),IW).forEach(x=>add(x));
+  if(o.label){add("");wrap(o.label,H).forEach(x=>add(x,{s:2,b:1,a:1}));}
+  add("");rule("║","─","║");add("");
+  o.lines.forEach((l,i)=>{if(i)add("");
+    lr(`${l.qty}x ${lineName(l)}`,eur(l.qty*l.price),IW).forEach(x=>add(x));
     if(l.qty>1)add("   à "+eur(l.price));
-    if(l.note)wrap(l.note,W-5).forEach((x,i)=>add((i?"     ":"   > ")+x,{b:1}));}
-  add("-".repeat(W));
-  lr("SUMME",eur(total(o)),W2).forEach(x=>add(x,{s:2,b:1}));
+    if(l.note)wrap(l.note,IW-5).forEach((x,j)=>add((j?"     ":"   > ")+x,{b:1}));});
+  add("");rule("║","─","║");add("");
+  lr("SUMME",eur(total(o)),H).forEach(x=>add(x,{s:2,b:1}));
   add(`${o.lines.reduce((s,l)=>s+l.qty,0)} Artikel`);
-  if(cfg.foot){add("");wrap(cfg.foot,W).forEach(x=>add(x,{a:1}));}
+  add("");rule("╠","═","╣");add("");
+  if(cfg.foot)wrap(cfg.foot,IW).forEach(x=>add(x,{a:1,b:1}));
+  add("Vielen Dank für Ihren Besuch!",{a:1});
+  add("");rule("╚","═","╝");
   return bl;}
-function bonBytes(o,when){const ESC=0x1b,GS=0x1d,b=[ESC,0x40,ESC,0x74,19];
-  for(const k of bonBlocks(o,when)){b.push(ESC,0x61,k.a,ESC,0x45,k.b,GS,0x21,k.s===2?0x11:k.s===1?0x01:0x00);b.push(...enc(k.t),0x0a);}
-  b.push(ESC,0x61,0,ESC,0x45,0,GS,0x21,0,ESC,0x64,4,GS,0x56,66,0);return b;}
+function bonRow(k,W){const IW=W-4,f=k.s===2?2:1,len=String(k.t).length*f;
+  const pl=k.a===1?Math.max(0,Math.floor((IW-len)/2)):0;return {pl,pr:Math.max(0,IW-len-pl)};}
+function bonBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,b=[ESC,0x40,ESC,0x74,19,ESC,0x61,0];
+  const n=s=>b.push(...enc(s));
+  for(const k of bonBlocks(o,when)){
+    if(k.rule){b.push(GS,0x21,0,ESC,0x45,0);n(k.rule[0]+k.rule[1].repeat(W-2)+k.rule[2]);b.push(0x0a);continue;}
+    const {pl,pr}=bonRow(k,W),side=k.s?0x01:0x00;
+    b.push(GS,0x21,side,ESC,0x45,0);n("║ "+" ".repeat(pl));
+    b.push(ESC,0x45,k.b,GS,0x21,k.s===2?0x11:k.s===1?0x01:0x00);n(k.t);
+    b.push(GS,0x21,side,ESC,0x45,0);n(" ".repeat(pr)+" ║");b.push(0x0a);}
+  b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
 function bonText(o,when){const W=parseInt(cfg.width)||48;
-  return bonBlocks(o,when).map(k=>{let t=k.s===2?k.t.split("").join(" "):k.t;if(k.a===1)t=" ".repeat(Math.max(0,Math.floor((W-t.length)/2)))+t;return t;}).join("\n");}
+  return bonBlocks(o,when).map(k=>{if(k.rule)return k.rule[0]+k.rule[1].repeat(W-2)+k.rule[2];
+    const {pl,pr}=bonRow(k,W),t=k.s===2?String(k.t).split("").map(c=>c+" ").join(""):k.t;
+    return "║ "+" ".repeat(pl)+t+" ".repeat(pr)+" ║";}).join("\n");}
 function b64(arr){let s="";for(let i=0;i<arr.length;i+=4096)s+=String.fromCharCode.apply(null,arr.slice(i,i+4096));return btoa(s);}
 
 const pending={};
