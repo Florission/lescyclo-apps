@@ -114,6 +114,11 @@ td.num{font-family:var(--font-num);text-align:right}
 .seg{display:flex;gap:4px}.seg button{min-height:38px;padding:6px 12px;font-size:14px}.seg button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:2px solid var(--accent)}
+.tbl.wand{background:var(--fg);border:none;border-radius:2px;opacity:.85}
+.tbl.has{background:#fff4d6;border-color:#d9a400;color:#3d2f00}
+.tbl.has.busy,.tbl.busy{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.tbl.has.pick{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tbl .s{white-space:pre-line;line-height:1.15;text-align:center;overflow:hidden}
 </style>
 </head>
 <body>
@@ -399,10 +404,11 @@ $("fHigh").querySelectorAll("button").forEach(b=>b.onclick=()=>{high=b.dataset.h
 function setHigh(){$("fHigh").querySelectorAll("button").forEach(b=>b.classList.toggle("on",(b.dataset.h==="1")===high));}
 $("fDate").onchange=()=>renderTables();$("fTime").onchange=()=>renderTables();
 
-function busyTables(date,time,exceptId){
-  if(!date||!time)return {};const t=mins(time), dur=cfg.duration||120, out={};
+function busyTables(date,time,exceptId,dur){
+  if(!date||!time)return {};const a=mins(time), b=a+(dur||durFor(parseInt($("fPers").value)||0)), out={};
   for(const r of res){if(r.id===exceptId||r.date!==date||!active(r))continue;
-    if(Math.abs(mins(r.time)-t)<dur)for(const tb of r.tables)out[tb]=`${r.time} ${r.name} (${r.persons})`;}
+    const s0=mins(r.time), e0=s0+durOf(r);
+    if(s0<b&&a<e0)for(const tb of r.tables)out[tb]=r.time+"–"+endOf(r.time,durOf(r))+" "+r.name+" ("+r.persons+")";}
   return out;}
 function renderTables(){
   const busy=busyTables($("fDate").value,$("fTime").value,editId), box=$("tables");box.textContent="";
@@ -425,7 +431,7 @@ function renderTables(){
   if(selTables.length&&seats&&p>seats)w.push(`${p} Personen, aber nur ${seats} Plätze an den gewählten Tischen.`);
   const cap=parseInt(cfg.cap);
   if(cap&&$("fDate").value&&$("fTime").value){const t=mins($("fTime").value),dur=cfg.duration||120;
-    const occ=res.filter(r=>r.id!==editId&&r.date===$("fDate").value&&active(r)&&Math.abs(mins(r.time)-t)<dur).reduce((s,r)=>s+r.persons,0);
+    const occ=res.filter(r=>r.id!==editId&&r.date===$("fDate").value&&active(r)&&mins(r.time)<t+durFor(p)&&t<mins(r.time)+durOf(r)).reduce((s,r)=>s+r.persons,0);
     if(occ+p>cap)w.push(`Zu der Zeit wären ${occ+p} Personen im Laden (Maximum ${cap}).`);}
   $("capWarn").hidden=!w.length;$("capWarn").innerHTML=w.map(esc).join("<br>");
   renderBookPlan(busy);
@@ -471,6 +477,9 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   if(!date||!time)return say("Bitte Datum und Uhrzeit angeben.","err");
   if(!name)return say("Bitte einen Namen eintragen.","err");
   if(!(persons>0))return say("Bitte die Personenzahl angeben.","err");
+  if(!["storniert","noshow"].includes($("fStatus").value)){
+    const busyNow=busyTables(date,time,editId,durFor(persons)), clash=selTables.filter(t=>busyNow[t]);
+    if(clash.length)return say("Nicht gespeichert: Tisch "+clash.join(", ")+" ist von "+time+" bis "+endOf(time,durFor(persons))+" schon belegt ("+clash.map(t=>busyNow[t]).join("; ")+"). Bitte andere Uhrzeit oder anderen Tisch wählen.","err");}
   // Gast finden oder anlegen
   let g=guests.find(x=>x.id===guestSel);
   if(!g&&phone)g=guests.find(x=>x.phone&&normPhone(x.phone)===normPhone(phone));
@@ -478,7 +487,7 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   if(!g){g={id:uid(),name,phone,note:"",created:new Date().toISOString()};guests.push(g);}
   else{g.name=name;if(phone)g.phone=phone;}
   const now=new Date().toISOString();
-  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,updated:now};
+  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,dur:durFor(persons),updated:now};
   if(editId){Object.assign(res.find(r=>r.id===editId),data);}
   else res.push({id:uid(),created:now,...data});
   if(!persist())return;
@@ -539,8 +548,17 @@ function ensureLayout(){
     if(t.x==null){const i=count[t.area]=(count[t.area]||0)+1;const c=(i-1)%6,r=Math.floor((i-1)/6);
       t.w=t.seats>=6?150:t.seats<=2?80:110;t.h=t.seats>=6?90:80;t.x=40+c*160;t.y=40+r*140;}}
 }
+/* --- Le's Cyclo Tischplan (v2) --- */
+const LC_PLAN=[{"id":"33","area":"Innen","seats":2,"shape":"rect","x":20,"y":0,"w":70,"h":70},{"id":"34","area":"Innen","seats":2,"shape":"rect","x":90,"y":0,"w":70,"h":70},{"id":"31","area":"Innen","seats":2,"shape":"rect","x":10,"y":100,"w":70,"h":70},{"id":"32","area":"Innen","seats":2,"shape":"rect","x":80,"y":100,"w":70,"h":70},{"id":"30","area":"Innen","seats":2,"shape":"rect","x":0,"y":180,"w":70,"h":70},{"id":"23","area":"Innen","seats":3,"shape":"rect","x":0,"y":280,"w":70,"h":70},{"id":"22","area":"Innen","seats":2,"shape":"rect","x":0,"y":410,"w":70,"h":70},{"id":"21","area":"Innen","seats":2,"shape":"rect","x":80,"y":410,"w":70,"h":70},{"id":"20","area":"Innen","seats":2,"shape":"rect","x":10,"y":550,"w":70,"h":70},{"id":"19","area":"Innen","seats":2,"shape":"rect","x":80,"y":550,"w":70,"h":70},{"id":"18","area":"Innen","seats":2,"shape":"rect","x":170,"y":550,"w":70,"h":70},{"id":"35","area":"Innen","seats":2,"shape":"rect","x":360,"y":10,"w":70,"h":70},{"id":"36","area":"Innen","seats":2,"shape":"rect","x":360,"y":140,"w":70,"h":70},{"id":"10","area":"Innen","seats":3,"shape":"rect","x":290,"y":350,"w":70,"h":140},{"id":"16","area":"Innen","seats":2,"shape":"rect","x":400,"y":480,"w":70,"h":70},{"id":"17","area":"Innen","seats":2,"shape":"rect","x":400,"y":550,"w":70,"h":70},{"id":"13","area":"Innen","seats":2,"shape":"rect","x":680,"y":350,"w":70,"h":70},{"id":"14","area":"Innen","seats":2,"shape":"rect","x":680,"y":420,"w":70,"h":70},{"id":"15","area":"Innen","seats":2,"shape":"rect","x":680,"y":510,"w":70,"h":70},{"id":"Küche","area":"Innen","seats":0,"shape":"deko","x":460,"y":0,"w":120,"h":190},{"id":"Wand 1","area":"Innen","seats":0,"shape":"deko","wall":true,"x":430,"y":0,"w":20,"h":240},{"id":"Wand 2","area":"Innen","seats":0,"shape":"deko","wall":true,"x":170,"y":250,"w":590,"h":10},{"id":"Wand 3","area":"Innen","seats":0,"shape":"deko","wall":true,"x":0,"y":250,"w":90,"h":10},{"id":"Wand 4","area":"Innen","seats":0,"shape":"deko","wall":true,"x":270,"y":280,"w":20,"h":90},{"id":"Wand 5","area":"Innen","seats":0,"shape":"deko","wall":true,"x":290,"y":330,"w":460,"h":20},{"id":"Wand 6","area":"Innen","seats":0,"shape":"deko","wall":true,"x":550,"y":570,"w":20,"h":60},{"id":"Pflanze","area":"Innen","seats":0,"shape":"deko","x":290,"y":300,"w":40,"h":40}];
+if((cfg.planV||0)<2){cfg.tables=JSON.parse(JSON.stringify(LC_PLAN));cfg.areas=["Innen"];cfg.planV=2;save("einstellungen",cfg);}
+const durFor=p=>(p>6?120:90);
+const durOf=r=>r.dur||durFor(r.persons||0);
+const endOf=(t,d)=>{const m=mins(t)+d;return pad(Math.floor(m/60)%24)+":"+pad(m%60);};
+function tableDay(id,date){return res.filter(r=>r.date===date&&active(r)&&r.tables.includes(id))
+  .sort((a,b)=>a.time.localeCompare(b.time)).map(r=>r.time+" "+String(r.name).split(" ")[0]);}
 ensureLayout();
-function tblEl(t,cls,label){const d=document.createElement("div");d.className="tbl "+(t.shape==="round"?"round ":"")+(t.shape==="deko"?"deko ":"")+(cls||"");
+function tblEl(t,cls,label){if(t.wall){const w=document.createElement("div");w.className="tbl deko wand "+(cls||"");
+  w.style.left=t.x/PW*100+"%";w.style.top=t.y/PH*100+"%";w.style.width=t.w/PW*100+"%";w.style.height=t.h/PH*100+"%";return w;}const d=document.createElement("div");d.className="tbl "+(t.shape==="round"?"round ":"")+(t.shape==="deko"?"deko ":"")+(cls||"");
   d.style.left=t.x/PW*100+"%";d.style.top=t.y/PH*100+"%";d.style.width=t.w/PW*100+"%";d.style.height=t.h/PH*100+"%";
   d.innerHTML=`<span class="n">${esc(t.id)}</span>`+(t.shape!=="deko"?`<span class="s">${t.seats} Pl.</span>`:"")+(label?`<span class="s">${esc(label)}</span>`:"");
   return d;}
@@ -549,7 +567,7 @@ function areaSeg(box,cur,onPick){box.textContent="";for(const a of cfg.areas){co
 
 /* Buchungs-Plan in der Tagesansicht */
 let rightMode="liste", bookArea=null;
-try{rightMode=load("ansicht",{}).rechts||"liste";}catch(e){}
+try{rightMode=load("ansicht",{}).rechts||"plan";}catch(e){}
 $("rightMode").querySelectorAll("button").forEach(b=>b.onclick=()=>{rightMode=b.dataset.m;save("ansicht",{rechts:rightMode});applyRight();});
 function applyRight(){$("rightMode").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.m===rightMode));
   $("planBox").hidden=rightMode!=="plan";$("planBox").style.display=rightMode==="plan"?"flex":"none";$("dayList").hidden=rightMode==="plan";renderBookPlan();}
@@ -558,11 +576,11 @@ function renderBookPlan(busy){
   if(!cfg.areas.includes(bookArea))bookArea=(cfg.tables.find(t=>selTables.includes(t.id))||{}).area||cfg.areas[0];
   areaSeg($("bookAreas"),bookArea,a=>{bookArea=a;renderBookPlan();});
   const date=$("fDate").value,time=$("fTime").value;busy=busy||busyTables(date,time,editId);
-  $("planCap").textContent=date&&time?`Belegung ${short(date)} um ${time} Uhr`:"Datum und Uhrzeit links wählen";
+  $("planCap").textContent=date&&time?`Belegung ${short(date)}, ${time}–${endOf(time,durFor(parseInt($("fPers").value)||0))} Uhr · gelb = an dem Tag reserviert`:"Datum und Uhrzeit links wählen";
   const box=$("bookPlan");box.textContent="";
   for(const t of cfg.tables.filter(x=>x.area===bookArea)){
     const isB=t.shape!=="deko";
-    const el=tblEl(t,(isB&&busy[t.id]?"busy ":"")+(selTables.includes(t.id)?"pick":""),isB&&busy[t.id]?busy[t.id]:"");
+    const el=tblEl(t,(isB&&busy[t.id]?"busy ":"")+(isB&&tableDay(t.id,date).length?"has ":"")+(selTables.includes(t.id)?"pick":""),isB?tableDay(t.id,date).join("\n"):"");
     if(isB)el.onclick=()=>{selTables=selTables.includes(t.id)?selTables.filter(x=>x!==t.id):[...selTables,t.id];renderTables();};
     box.append(el);}
   if(!cfg.tables.some(x=>x.area===bookArea))box.innerHTML=`<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">Noch keine Tische – im Tab „Tischplan“ anlegen.</div>`;
