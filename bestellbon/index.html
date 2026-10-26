@@ -100,7 +100,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
         <div class="items" id="items"></div>
       </div>
       <div class="panel sticky">
-        <label>Tisch / Name (optional)<input id="oLabel" placeholder="z. B. Tisch 5 oder Abholung Müller"></label>
+        <label>Tisch / Name (optional)<input id="oLabel" placeholder="z. B. Tisch 5 oder Abholung Müller"></label><button type="button" id="tpOpen" class="tpOpen">Tisch im Plan wählen</button>
         <div class="lines" id="lines"></div>
         <div class="sum"><span>Summe</span><span id="sum">0,00 €</span></div>
         <div class="actions">
@@ -391,6 +391,46 @@ $("sTest").onclick=()=>{cfg=readSettings();save("einstellungen",cfg);say("Testdr
 
 /* ---------- Start ---------- */
 renderOrder();
+</script>
+
+<div class="overlay" id="tpBox" hidden><div class="panel dialog tpDlg">
+<h2>Tisch wählen</h2><div class="note">Mehrere Tische antippen, z. B. 21 + 22.</div>
+<div class="tpPlan" id="tpPlan"></div>
+<div class="actions"><button type="button" id="tpNone">Ohne Tisch</button><button type="button" id="tpCancel">Abbrechen</button><button type="button" id="tpOk" class="primary big">Übernehmen</button></div>
+</div></div>
+<style>
+.tpOpen{margin-top:6px;width:100%}
+.tpDlg{width:min(980px,96vw);max-width:none}
+.tpPlan{position:relative;width:100%;aspect-ratio:16/10;border:1px solid var(--line);border-radius:12px;margin:10px 0;container-type:inline-size;overflow:hidden}
+.tpT{position:absolute;display:flex;align-items:center;justify-content:center;border:2px solid var(--accent);border-radius:8px;background:var(--surface);font-weight:700;font-size:3cqw;cursor:pointer;user-select:none}
+.tpT.on{background:var(--accent);color:var(--accent-fg,#fff)}
+.tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--muted);color:var(--muted);font-size:2.2cqw;border-radius:6px}
+.tpW{position:absolute;background:var(--fg);opacity:.85;border-radius:2px}
+</style>
+<script>
+(function(){
+  const PLAN=[{"id":"33","area":"Innen","seats":2,"shape":"rect","x":20,"y":0,"w":70,"h":70},{"id":"34","area":"Innen","seats":2,"shape":"rect","x":90,"y":0,"w":70,"h":70},{"id":"31","area":"Innen","seats":2,"shape":"rect","x":10,"y":100,"w":70,"h":70},{"id":"32","area":"Innen","seats":2,"shape":"rect","x":80,"y":100,"w":70,"h":70},{"id":"30","area":"Innen","seats":2,"shape":"rect","x":0,"y":180,"w":70,"h":70},{"id":"23","area":"Innen","seats":3,"shape":"rect","x":0,"y":280,"w":70,"h":70},{"id":"22","area":"Innen","seats":2,"shape":"rect","x":0,"y":410,"w":70,"h":70},{"id":"21","area":"Innen","seats":2,"shape":"rect","x":80,"y":410,"w":70,"h":70},{"id":"20","area":"Innen","seats":2,"shape":"rect","x":10,"y":550,"w":70,"h":70},{"id":"19","area":"Innen","seats":2,"shape":"rect","x":80,"y":550,"w":70,"h":70},{"id":"18","area":"Innen","seats":2,"shape":"rect","x":170,"y":550,"w":70,"h":70},{"id":"35","area":"Innen","seats":2,"shape":"rect","x":360,"y":10,"w":70,"h":70},{"id":"36","area":"Innen","seats":2,"shape":"rect","x":360,"y":140,"w":70,"h":70},{"id":"10","area":"Innen","seats":3,"shape":"rect","x":290,"y":350,"w":70,"h":140},{"id":"16","area":"Innen","seats":2,"shape":"rect","x":400,"y":480,"w":70,"h":70},{"id":"17","area":"Innen","seats":2,"shape":"rect","x":400,"y":550,"w":70,"h":70},{"id":"13","area":"Innen","seats":2,"shape":"rect","x":680,"y":350,"w":70,"h":70},{"id":"14","area":"Innen","seats":2,"shape":"rect","x":680,"y":420,"w":70,"h":70},{"id":"15","area":"Innen","seats":2,"shape":"rect","x":680,"y":510,"w":70,"h":70},{"id":"Küche","area":"Innen","seats":0,"shape":"deko","x":460,"y":0,"w":120,"h":190},{"id":"Wand 1","area":"Innen","seats":0,"shape":"deko","wall":true,"x":430,"y":0,"w":20,"h":240},{"id":"Wand 2","area":"Innen","seats":0,"shape":"deko","wall":true,"x":170,"y":250,"w":590,"h":10},{"id":"Wand 3","area":"Innen","seats":0,"shape":"deko","wall":true,"x":0,"y":250,"w":90,"h":10},{"id":"Wand 4","area":"Innen","seats":0,"shape":"deko","wall":true,"x":270,"y":280,"w":20,"h":90},{"id":"Wand 5","area":"Innen","seats":0,"shape":"deko","wall":true,"x":290,"y":330,"w":460,"h":20},{"id":"Wand 6","area":"Innen","seats":0,"shape":"deko","wall":true,"x":550,"y":570,"w":20,"h":60},{"id":"Pflanze","area":"Innen","seats":0,"shape":"deko","x":290,"y":300,"w":40,"h":40}], PW=1000, PH=625;
+  const box=document.getElementById("tpBox"), plan=document.getElementById("tpPlan"), inp=document.getElementById("oLabel");
+  let sel=[];
+  const pos=(el,t)=>{el.style.left=t.x/PW*100+"%";el.style.top=t.y/PH*100+"%";el.style.width=t.w/PW*100+"%";el.style.height=t.h/PH*100+"%";};
+  function draw(){plan.textContent="";
+    for(const t of PLAN){const el=document.createElement("div");pos(el,t);
+      if(t.wall)el.className="tpW";
+      else if(t.shape==="deko"){el.className="tpD";el.textContent=t.id;}
+      else{el.className="tpT"+(sel.includes(t.id)?" on":"");el.textContent=t.id;
+        el.onclick=()=>{sel=sel.includes(t.id)?sel.filter(x=>x!==t.id):[...sel,t.id];draw();};}
+      plan.append(el);}}
+  const setLabel=v=>{inp.value=v;inp.dispatchEvent(new Event("input",{bubbles:true}));};
+  document.getElementById("tpOpen").onclick=()=>{
+    const m=(inp.value||"").match(/Tisch\s+([\d\s+,]+)/i);
+    sel=m?m[1].split(/[^\d]+/).filter(Boolean):[];draw();box.hidden=false;};
+  document.getElementById("tpCancel").onclick=()=>{box.hidden=true;};
+  document.getElementById("tpNone").onclick=()=>{setLabel((inp.value||"").replace(/Tisch\s+[\d\s+,]+/i,"").trim());box.hidden=true;};
+  document.getElementById("tpOk").onclick=()=>{
+    const order=[...sel].sort((a,b)=>Number(a)-Number(b));
+    const rest=(inp.value||"").replace(/Tisch\s+[\d\s+,]+/i,"").trim();
+    setLabel(order.length?("Tisch "+order.join("+")+(rest?" "+rest:"")):rest);box.hidden=true;};
+})();
 </script>
 </body>
 </html>
