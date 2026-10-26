@@ -194,7 +194,7 @@ const load=(k,d)=>{try{const s=A.load(k);return s?JSON.parse(s):d;}catch(e){retu
 const save=(k,v)=>A.save(k,JSON.stringify(v));
 const clone=o=>JSON.parse(JSON.stringify(o));
 let menu=load("speisekarte",null)||clone(DEFAULT_MENU);
-let cfg=Object.assign({ip:"",port:9100,width:48,head:"Le's Cyclo",foot:"Keine Rechnung - kein Kassenbeleg"},load("einstellungen",{}));
+let cfg=Object.assign({ip:"",port:9100,width:48,head:"LC-POTSDAM",foot:"Keine Rechnung - kein Kassenbeleg"},load("einstellungen",{}));
 let hist=load("bons",[]);
 let order=load("offen",{label:"",lines:[]});
 
@@ -297,6 +297,7 @@ function lr(l,r,w){const lines=wrap(l,w-r.length-1);const last=lines.pop()||"";
   return [...lines,last+" ".repeat(Math.max(1,w-last.length-r.length))+r];}
 /* liefert Liste von Bausteinen: {t:text, b:bold, s:size(0/1=hoch/2=breit+hoch), a:align(0/1)} */
 Object.assign(CP,{"═":0xCD,"║":0xBA,"╔":0xC9,"╗":0xBB,"╚":0xC8,"╝":0xBC,"╠":0xCC,"╣":0xB9,"─":0xC4});
+if(cfg.head==="Le's Cyclo")cfg.head="LC-POTSDAM";
 const BON_INFO=["Lindenstraße 4 · 14467 Potsdam","Tel. 0331 / 88731277"];
 /* Bon im Kassenbon-Stil mit Doppelrahmen. Bausteine: {t,b,s(0/1/2),a(0/1)} oder {rule:[links,mitte,rechts]} */
 function bonBlocks(o,when){const W=parseInt(cfg.width)||48,IW=W-4,H=Math.floor(IW/2),bl=[];
@@ -307,7 +308,6 @@ function bonBlocks(o,when){const W=parseInt(cfg.width)||48,IW=W-4,H=Math.floor(I
   BON_INFO.forEach(x=>wrap(x,IW).forEach(y=>add(y,{a:1})));
   add("");rule("╠","═","╣");
   lr("Bestellübersicht",stamp(when),IW).forEach(x=>add(x));
-  if(o.label){add("");wrap(o.label,H).forEach(x=>add(x,{s:2,b:1,a:1}));}
   add("");rule("║","─","║");add("");
   o.lines.forEach((l,i)=>{if(i)add("");
     lr(`${l.qty}x ${lineName(l)}`,eur(l.qty*l.price),IW).forEach(x=>add(x));
