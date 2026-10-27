@@ -81,6 +81,17 @@
     }
   }
 
+  /* ---------- Tägliche interne Kopie (letzte 14 Tage) ---------- */
+  try {
+    const d = new Date(), today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const a = load();
+    if (a.length && !LC.ls.get('auto_Trinkgeld_' + today)) {
+      LC.ls.set('auto_Trinkgeld_' + today, JSON.stringify(a));
+      const ks = Object.keys(localStorage).filter(k => k.startsWith('trinkgeld:auto_Trinkgeld_')).sort();
+      ks.slice(0, Math.max(0, ks.length - 14)).forEach(k => localStorage.removeItem(k));
+    }
+  } catch (e) {}
+
   /* ---------- Bridge ---------- */
   window.Android = {
     list: () => JSON.stringify(load()),
