@@ -247,7 +247,7 @@ $("chooser").onclick=e=>{if(e.target===$("chooser"))$("chooser").hidden=true;};
 function lineName(l){return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(l.option?" · "+l.option:"");}
 function addLine(it,vi,opt){const v=it.variants[vi];
   const same=order.lines.find(l=>!l.note&&l.name===it.name&&l.nr===it.nr&&l.variant===v.label&&l.option===opt&&l.price===v.price);
-  if(same)same.qty++;else order.lines.push({nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:""});
+  if(same)same.qty++;else order.lines.push({cat:(menu[cat]||{}).name||"",nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:""});
   saveOrder();renderOrder();say("");}
 const total=o=>o.lines.reduce((s,l)=>s+l.qty*l.price,0);
 let noteOpen=-1;
@@ -314,7 +314,10 @@ function bonBlocks(o,when){const W=parseInt(cfg.width)||48,IW=W-4,H=Math.floor(I
     if(l.qty>1)add("   à "+eur(l.price));
     if(l.note)wrap(l.note,IW-5).forEach((x,j)=>add((j?"     ":"   > ")+x,{b:1}));});
   add("");rule("║","─","║");add("");
-  lr("SUMME",eur(total(o)),H).forEach(x=>add(x,{s:2,b:1}));
+  if(o.discount){const sub=total(o),dv=Math.round(sub*o.discount/100);
+    lr("Zwischensumme",eur(sub),IW).forEach(x=>add(x));lr("Rabatt "+o.discount+" %","-"+eur(dv),IW).forEach(x=>add(x));
+    lr("SUMME",eur(sub-dv),H).forEach(x=>add(x,{s:2,b:1}));}
+  else lr("SUMME",eur(total(o)),H).forEach(x=>add(x,{s:2,b:1}));
   add(`${o.lines.reduce((s,l)=>s+l.qty,0)} Artikel`);
   add("");rule("╠","═","╣");add("");
   if(cfg.foot)wrap(cfg.foot,IW).forEach(x=>add(x,{a:1,b:1}));
@@ -356,7 +359,7 @@ $("print").onclick=()=>{if(!order.lines.length)return;const when=new Date(),snap
 function renderHist(){const tb=$("hist");tb.textContent="";say("","",$("hMsg"));
   if(!hist.length){tb.innerHTML=`<tr><td colspan="5" class="empty">Noch keine Bons gedruckt.</td></tr>`;return;}
   hist.forEach(h=>{const tr=document.createElement("tr");const d=new Date(h.at);
-    tr.innerHTML=`<td style="white-space:nowrap">${stamp(d)}</td><td>${esc(h.label||"–")}</td><td>${esc(h.lines.map(l=>l.qty+"× "+l.name).join(", "))}</td><td class="num">${eur(total(h))}</td>`;
+    tr.innerHTML=`<td style="white-space:nowrap">${stamp(d)}</td><td>${esc(h.label||"–")}</td><td>${esc(h.lines.map(l=>l.qty+"× "+l.name).join(", "))}</td><td class="num">${eur(total(h)-Math.round(total(h)*(h.discount||0)/100))}</td>`;
     const td=document.createElement("td");td.style.whiteSpace="nowrap";
     const r=document.createElement("button");r.textContent="Nochmal drucken";
     r.onclick=()=>{say("Wird gedruckt …","",$("hMsg"));sendPrint(h,new Date(h.at),(ok,err)=>say(ok?"Gedruckt.":"Drucken fehlgeschlagen ("+err+")",ok?"ok":"err",$("hMsg")));};
@@ -450,6 +453,142 @@ renderOrder();
     const order=[...sel].sort((a,b)=>Number(a)-Number(b));
     const rest=(inp.value||"").replace(/Tisch\s+[\d\s+,]+/i,"").trim();
     setLabel(order.length?("Tisch "+order.join("+")+(rest?" "+rest:"")):rest);box.hidden=true;};
+})();
+</script>
+<script>
+/* ---------- Tische: bonieren, Küchenbon, Rechnung mit Rabatt und getrennt zahlen ---------- */
+(function(){
+const DRINKS=["Softdrinks","Homemade & Smoothies","Kaffee & Tee","Bier, Wein & Bar"];
+const isFood=l=>!DRINKS.includes(l.cat||"");
+let tabs=load("tische",{});
+const saveTabs=()=>save("tische",tabs);
+const sameLine=(a,b)=>a.name===b.name&&a.nr===b.nr&&a.variant===b.variant&&a.option===b.option&&a.price===b.price&&(a.note||"")===(b.note||"");
+const sortKeys=()=>Object.keys(tabs).sort((a,b)=>(parseInt(a.replace(/\D/g,""))||999)-(parseInt(b.replace(/\D/g,""))||999)||a.localeCompare(b));
+
+/* Oberfläche ergänzen */
+const css=document.createElement("style");css.textContent=`
+.tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:84px;text-align:left;background:var(--bg)}
+.tbtn b{font-size:18px}.tbtn span{font-family:var(--font-num);color:var(--muted);font-size:14px}
+.tbtn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}.tbtn.on span{color:var(--accent-fg)}
+.pl{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 10px;align-items:center;border-bottom:1px solid var(--line);padding:6px 0}
+.pl .q{display:flex;align-items:center;gap:4px}.pl .q button{min-height:38px;min-width:38px;padding:0;font-size:18px}
+.pl .q b{font-family:var(--font-num);min-width:3.2em;text-align:center}.pl .p{font-family:var(--font-num);white-space:nowrap}
+.pl .x{min-height:38px;padding:2px 10px}.pl.off{opacity:.45}
+.tsum{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:15px}
+.tsum.big{font-size:22px;font-weight:700;border-top:2px solid var(--fg);padding-top:8px;font-family:var(--font-body)}
+#tabInfo{font-size:14px;background:var(--blue-soft);border-radius:var(--r);padding:8px 10px}
+`;document.head.append(css);
+
+const tb=document.createElement("button");tb.dataset.v="tische";tb.textContent="Tische";
+document.querySelector(".tabs").insertBefore(tb,document.querySelector('.tabs [data-v="bons"]'));
+tb.onclick=()=>show("tische");
+const sec=document.createElement("section");sec.id="v-tische";sec.hidden=true;
+sec.innerHTML=`<div class="grid"><div class="panel"><h2>Offene Tische</h2><div class="tlist" id="tList"></div></div>
+<div class="panel sticky" id="tDetail"></div></div>`;
+$("v-bestellen").after(sec);
+const info=document.createElement("div");info.id="tabInfo";info.hidden=true;$("tpOpen").after(info);
+$("print").textContent="Bonieren";
+
+const _show=show;
+show=function(v){$("v-tische").hidden=v!=="tische";
+  if(v==="tische"){view=v;document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+    ["bestellen","bons","karte","einst"].forEach(x=>$("v-"+x).hidden=true);renderTische();return;}
+  _show(v);};
+const _ro=renderOrder;
+renderOrder=function(){_ro();const t=tabs[(order.label||"").trim()];
+  info.hidden=!t;if(t)info.innerHTML=`Offen an <b>${esc(t.label)}</b>: ${t.lines.reduce((s,l)=>s+l.qty,0)} Pos. · ${eur(total(t))}`;};
+
+/* Drucken */
+function sendRaw(bytes,cb){if(!cfg.ip)return cb(false,"Keine Drucker-IP eingetragen (⚙).");
+  const id=String(Date.now())+Math.random();pending[id]=cb;A.print(id,cfg.ip,parseInt(cfg.port)||9100,b64(bytes));}
+function kitchenBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2),W3=Math.floor(W/3);
+  const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
+  const sz=s=>b.push(GS,0x21,s),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a),inv=v=>b.push(GS,0x42,v?1:0);
+  al(1);sz(0x11);bold(1);n("KÜCHE");nl();
+  sz(0x22);wrap(o.label,W3).forEach(x=>{n(x);nl();});
+  sz(0x00);bold(0);n(stamp(when));nl();
+  al(0);n("=".repeat(W));nl();nl();
+  for(const l of o.lines){sz(0x11);bold(1);
+    wrap(`${l.qty}x ${lineName(l)}`,W2-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});
+    if(l.note){inv(1);wrap(">> "+l.note,W2-2).forEach(x=>{n(" "+x+" ");nl();});inv(0);}
+    bold(0);sz(0);nl();}
+  n("=".repeat(W));nl();
+  b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
+window.kitchenBytes=kitchenBytes;
+
+/* Bonieren */
+$("print").onclick=()=>{if(!order.lines.length)return;const label=(order.label||"").trim();
+  if(!label){say("Bitte zuerst einen Tisch wählen.","err");$("tpOpen").click();return;}
+  const when=new Date(),snap=clone(order),food=snap.lines.filter(isFood);
+  const book=()=>{const t=tabs[label]||(tabs[label]={label,lines:[],opened:when.toISOString()});
+    for(const l of snap.lines){const s=t.lines.find(x=>sameLine(x,l));if(s)s.qty+=l.qty;else t.lines.push(clone(l));}
+    saveTabs();order={label:"",lines:[]};saveOrder();renderOrder();
+    say(`Boniert auf ${label}: ${eur(total(snap))}`+(food.length?" – Küchenbon gedruckt":" (nur Getränke, kein Küchenbon)"),"ok");};
+  if(!food.length)return book();
+  $("print").disabled=true;say("Küchenbon wird gedruckt …");
+  sendRaw(kitchenBytes({label,lines:food},when),(ok,err)=>{$("print").disabled=false;
+    if(!ok)return say("Küchenbon nicht gedruckt – Drucker prüfen ("+err+"). Die Bestellung ist noch NICHT gebucht.","err");book();});};
+
+/* Tische / Rechnung */
+let selTab=null,pay=[],disc=0,armed="";
+function renderTische(){const keys=sortKeys();if(selTab&&!tabs[selTab])selTab=null;
+  const box=$("tList");box.textContent="";
+  if(!keys.length)box.innerHTML=`<div class="empty">Keine offenen Tische. Unter „Bestellen“ einen Tisch wählen und bonieren.</div>`;
+  for(const k of keys){const t=tabs[k],b=document.createElement("button");b.className="tbtn"+(k===selTab?" on":"");
+    const since=new Date(t.opened);
+    b.innerHTML=`<b>${esc(t.label)}</b><span>${eur(total(t))}</span><span>seit ${pad(since.getHours())}:${pad(since.getMinutes())}</span>`;
+    b.onclick=()=>{selTab=k;pay=t.lines.map(l=>l.qty);disc=0;armed="";renderTische();};box.append(b);}
+  renderDetail();}
+function renderDetail(){const d=$("tDetail"),t=tabs[selTab];
+  if(!t){d.innerHTML=`<h2>Rechnung</h2><div class="empty">Links einen Tisch antippen.</div>`;return;}
+  if(pay.length!==t.lines.length)pay=t.lines.map(l=>l.qty);
+  const sub=t.lines.reduce((s,l,i)=>s+pay[i]*l.price,0),dv=Math.round(sub*disc/100);
+  d.innerHTML=`<h2>Rechnung ${esc(t.label)}</h2><p class="note">Bezahlt wird, was rechts gezählt ist. Für getrennt zahlen die Anzahl pro Position anpassen – der Rest bleibt am Tisch offen.</p>
+  <div id="tLines"></div>
+  <div class="actions"><button id="tAll">Alles</button><button id="tNone">Nichts</button></div>
+  <div><div class="note" style="margin-bottom:6px">Rabatt</div><div class="seg" id="tDisc"></div></div>
+  <div class="tsum"><span>Auswahl</span><span>${eur(sub)}</span></div>
+  ${disc?`<div class="tsum"><span>Rabatt ${disc} %</span><span>-${eur(dv)}</span></div>`:""}
+  <div class="tsum big"><span>Zu zahlen</span><span>${eur(sub-dv)}</span></div>
+  <div class="actions"><button id="tPaid">Ohne Druck abrechnen</button><button id="tBill" class="primary big">Rechnung drucken</button></div>
+  <div class="actions"><button id="tKitchen">Küchenbon nachdrucken</button></div>
+  <div class="msg" id="tMsg"></div>`;
+  const lb=$("tLines");
+  t.lines.forEach((l,i)=>{const r=document.createElement("div");r.className="pl"+(pay[i]?"":" off");
+    const q=document.createElement("div");q.className="q";
+    const m=document.createElement("button");m.textContent="−";m.onclick=()=>{if(pay[i]>0)pay[i]--;renderDetail();};
+    const c=document.createElement("b");c.textContent=pay[i]+"/"+l.qty;
+    const p=document.createElement("button");p.textContent="+";p.onclick=()=>{if(pay[i]<l.qty)pay[i]++;renderDetail();};
+    q.append(m,c,p);
+    const nm=document.createElement("div");nm.innerHTML=`<b>${esc(lineName(l))}</b>${l.note?`<div class="note">${esc(l.note)}</div>`:""}`;
+    const pr=document.createElement("div");pr.className="p";pr.textContent=eur(pay[i]*l.price);
+    const x=document.createElement("button");x.className="x danger";x.textContent=armed==="del"+i?"Löschen?":"✕";
+    x.onclick=()=>{if(armed!=="del"+i){armed="del"+i;renderDetail();return;}armed="";
+      if(l.qty>1){l.qty--;}else{t.lines.splice(i,1);}pay=t.lines.map(z=>z.qty);
+      if(!t.lines.length)delete tabs[selTab];saveTabs();renderTische();};
+    r.append(q,nm,pr,x);lb.append(r);});
+  const ds=$("tDisc");[0,5,10,20].forEach(v=>{const b=document.createElement("button");b.textContent=v?v+" %":"kein";
+    if(v===disc)b.classList.add("on");b.onclick=()=>{disc=v;renderDetail();};ds.append(b);});
+  $("tAll").onclick=()=>{pay=t.lines.map(l=>l.qty);renderDetail();};
+  $("tNone").onclick=()=>{pay=t.lines.map(()=>0);renderDetail();};
+  const tm=(s,k)=>say(s,k,$("tMsg"));
+  const selection=()=>t.lines.map((l,i)=>Object.assign(clone(l),{qty:pay[i]})).filter(l=>l.qty>0);
+  const settle=(sel,when)=>{t.lines.forEach((l,i)=>l.qty-=pay[i]);t.lines=t.lines.filter(l=>l.qty>0);
+    hist.unshift({at:when.toISOString(),label:t.label,lines:sel,discount:disc});hist=hist.slice(0,50);save("bons",hist);
+    const left=t.lines.length;if(!left)delete tabs[selTab];saveTabs();pay=left?t.lines.map(l=>l.qty):[];disc=0;renderTische();
+    return left;};
+  $("tBill").onclick=()=>{const sel=selection();if(!sel.length)return tm("Nichts ausgewählt.","err");
+    const when=new Date();$("tBill").disabled=true;tm("Rechnung wird gedruckt …");
+    sendPrint({label:t.label,lines:sel,discount:disc},when,(ok,err)=>{if(!ok){$("tBill").disabled=false;return tm("Drucken fehlgeschlagen ("+err+").","err");}
+      const left=settle(sel,when);say(left?"Teilrechnung gedruckt – Rest bleibt offen.":"Rechnung gedruckt – Tisch geschlossen.","ok",$("tMsg"));});};
+  $("tPaid").onclick=()=>{const sel=selection();if(!sel.length)return tm("Nichts ausgewählt.","err");
+    if(armed!=="paid"){armed="paid";$("tPaid").textContent="Wirklich abrechnen?";return;}armed="";settle(sel,new Date());};
+  $("tKitchen").onclick=()=>{const food=selection().filter(isFood);if(!food.length)return tm("Keine Speisen ausgewählt.","err");
+    sendRaw(kitchenBytes({label:t.label,lines:food},new Date()),(ok,err)=>tm(ok?"Küchenbon gedruckt.":"Drucken fehlgeschlagen ("+err+").",ok?"ok":"err"));};
+}
+window.lcTabs=()=>tabs;
+renderOrder();
 })();
 </script>
 </body>
