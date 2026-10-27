@@ -679,5 +679,103 @@ $("bClean").onclick=()=>{const b=$("bClean");if(b.textContent!=="Wirklich lösch
 /* ---------- Start ---------- */
 resetForm();applyRight();
 </script>
+<script>
+/* ---------- Tischplan zuerst: Tisch antippen → Reservierung eingeben; Reservierungen per Ziehen verschieben ---------- */
+(function(){
+const css=document.createElement("style");css.textContent=`
+#resDrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);overflow-y:auto;z-index:60;background:var(--bg);
+  box-shadow:-8px 0 24px rgba(0,0,0,.25);padding:12px;display:flex;flex-direction:column;gap:10px}
+#resDrawer .rdHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#resDrawer .rdHead b{font-size:18px}
+#resDrawer .rdShift{display:flex;gap:6px;flex-wrap:wrap}
+#resDrawer .rdShift button{min-height:36px;padding:4px 10px}
+.tbl .rchips{display:flex;flex-direction:column;gap:2px;width:100%;padding:0 3px;margin-top:2px}
+.tbl .rchip{font:inherit;font-size:.78em;line-height:1.2;min-height:0!important;padding:1px 4px;border-radius:4px;
+  background:#ffe9a8;color:#3d2f00;border:1px solid #d9a400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+  touch-action:none;cursor:grab}
+.tbl .rchip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.rghost{position:fixed;z-index:80;pointer-events:none;background:#ffe9a8;color:#3d2f00;border:1px solid #d9a400;border-radius:6px;
+  padding:4px 8px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.tbl.dropT{outline:3px dashed var(--accent);outline-offset:2px}
+#lcToast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:90;background:var(--fg);color:var(--bg);
+  padding:10px 16px;border-radius:10px;font-weight:600;max-width:90vw}
+#lcToast.err{background:var(--danger);color:#fff}
+#planHint{font-size:13px;color:var(--muted)}
+`;document.head.append(css);
+
+/* Formular in eine Seitenleiste verschieben, Plan nimmt die ganze Breite */
+const formPanel=$("form").closest(".panel"), grid=formPanel.parentElement;
+const drawer=document.createElement("div");drawer.id="resDrawer";drawer.hidden=true;
+drawer.innerHTML=`<div class="rdHead"><b id="rdTitle">Reservierung</b><button type="button" id="rdClose" aria-label="Schließen">✕</button></div>
+<div class="rdShift"><span class="note" style="align-self:center">Uhrzeit:</span>
+<button type="button" data-m="-30">−30 Min</button><button type="button" data-m="-15">−15</button>
+<button type="button" data-m="15">+15</button><button type="button" data-m="30">+30 Min</button></div>`;
+drawer.append(formPanel);document.body.append(drawer);
+grid.style.gridTemplateColumns="1fr";
+const hint=document.createElement("div");hint.id="planHint";
+hint.textContent="Tisch antippen = neue Reservierung · Reservierung antippen = ändern/löschen · Reservierung auf anderen Tisch ziehen = verschieben";
+$("planCap").after(hint);
+
+const toastEl=document.createElement("div");toastEl.id="lcToast";toastEl.hidden=true;document.body.append(toastEl);
+let tt=null;const toast=(t,k)=>{toastEl.textContent=t;toastEl.className=k||"";toastEl.hidden=false;clearTimeout(tt);tt=setTimeout(()=>toastEl.hidden=true,4000);};
+
+const openD=()=>{drawer.hidden=false;$("rdTitle").textContent=editId?"Reservierung ändern":"Neue Reservierung";};
+const closeD=()=>{drawer.hidden=true;};
+$("rdClose").onclick=()=>{resetForm();say("");};
+drawer.querySelectorAll(".rdShift button").forEach(b=>b.onclick=()=>{const t=$("fTime").value||"18:00";
+  let m=(mins(t)+parseInt(b.dataset.m)+1440)%1440;$("fTime").value=pad(Math.floor(m/60))+":"+pad(m%60);renderTables();});
+
+const _say=say;say=function(t,k,el){_say(t,k,el);if(t&&(!el||el===$("msg"))&&drawer.hidden)toast(t,k==="err"?"err":"");};
+const _reset=resetForm;resetForm=function(){_reset.apply(this,arguments);closeD();};
+const _edit=editRes;editRes=function(id){_edit(id);openD();};
+
+/* Plan immer anzeigen */
+rightMode="plan";try{save("ansicht",{rechts:"plan"});}catch(e){}applyRight();
+
+/* Tische im Plan mit Reservierungen bestücken */
+const _rbp=renderBookPlan;
+renderBookPlan=function(busy){_rbp(busy);if(rightMode==="plan")decorate();};
+function decorate(){const date=$("fDate").value;
+  document.querySelectorAll("#bookPlan .tbl").forEach(el=>{
+    if(el.classList.contains("deko"))return;const n=el.querySelector(".n");if(!n)return;const id=n.textContent;
+    el.querySelectorAll(".s").forEach((s,i)=>{if(i>0)s.remove();});
+    const list=res.filter(r=>r.date===date&&active(r)&&r.tables.includes(id)).sort((a,b)=>a.time.localeCompare(b.time));
+    if(list.length){const box=document.createElement("div");box.className="rchips";
+      for(const r of list){const c=document.createElement("button");c.type="button";c.className="rchip"+(r.id===editId?" on":"");
+        c.textContent=r.time+" "+String(r.name).split(" ")[0]+" ("+r.persons+")";c.title=r.time+"–"+endOf(r.time,durOf(r))+" "+r.name+", "+r.persons+" P.";
+        c.dataset.id=r.id;c.dataset.from=id;c.addEventListener("pointerdown",startDrag);box.append(c);}
+      el.append(box);}
+    el.onclick=e=>{if(e.target.closest(".rchip"))return;
+      if(drawer.hidden){resetForm();selTables=[id];openD();renderTables();setTimeout(()=>$("fName").focus(),60);}
+      else{selTables=selTables.includes(id)?selTables.filter(x=>x!==id):[...selTables,id];renderTables();}};
+  });}
+
+/* Ziehen */
+let dg=null;
+function startDrag(e){e.stopPropagation();e.preventDefault();const c=e.currentTarget;
+  dg={id:c.dataset.id,from:c.dataset.from,x:e.clientX,y:e.clientY,moved:false,ghost:null,label:c.textContent,over:null};
+  window.addEventListener("pointermove",mv);window.addEventListener("pointerup",up,{once:true});window.addEventListener("pointercancel",cancel,{once:true});}
+function targetAt(x,y){const t=document.elementFromPoint(x,y);const el=t&&t.closest("#bookPlan .tbl");return el&&!el.classList.contains("deko")?el:null;}
+function mv(e){if(!dg)return;
+  if(!dg.moved&&Math.hypot(e.clientX-dg.x,e.clientY-dg.y)>8){dg.moved=true;dg.ghost=document.createElement("div");dg.ghost.className="rghost";dg.ghost.textContent=dg.label;document.body.append(dg.ghost);}
+  if(!dg.ghost)return;dg.ghost.style.left=e.clientX+10+"px";dg.ghost.style.top=e.clientY+10+"px";
+  const el=targetAt(e.clientX,e.clientY);if(dg.over&&dg.over!==el)dg.over.classList.remove("dropT");if(el){el.classList.add("dropT");dg.over=el;}}
+function cleanup(){window.removeEventListener("pointermove",mv);if(dg){if(dg.ghost)dg.ghost.remove();if(dg.over)dg.over.classList.remove("dropT");}}
+function cancel(){cleanup();dg=null;}
+function up(e){cleanup();const d=dg;dg=null;if(!d)return;
+  if(!d.moved){editRes(d.id);return;}
+  const el=targetAt(e.clientX,e.clientY);if(!el)return;const to=el.querySelector(".n").textContent;
+  const r=res.find(x=>x.id===d.id);if(!r||to===d.from)return;
+  if(r.tables.includes(to))return toast("Die Reservierung liegt schon auf Tisch "+to+".","err");
+  const busy=busyTables(r.date,r.time,r.id,durOf(r));
+  if(busy[to])return toast("Tisch "+to+" ist dann schon belegt ("+busy[to]+").","err");
+  r.tables=r.tables.map(t=>t===d.from?to:t);r.updated=new Date().toISOString();
+  if(!persist())return;
+  if(editId===r.id)selTables=[...r.tables];
+  renderTables();renderDay();toast(r.name+" verschoben: Tisch "+d.from+" → "+to,"");}
+
+renderTables();
+})();
+</script>
 </body>
 </html>
