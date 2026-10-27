@@ -7,6 +7,15 @@ window.Android = {
       .then((r) => { if (r !== 'aborted') LC.call('onMsg', 'ok:Sicherung erstellt.'); })
       .catch(() => LC.call('onMsg', 'err:Sicherung konnte nicht gespeichert werden.'));
   },
+  autoBackup: (filename, data) => {
+    // iPad: Kopie im Gerätespeicher (letzte 14 Tage) – schützt vor versehentlichem Löschen in der App
+    try {
+      LC.ls.set('auto_' + filename, String(data));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('reservierung:auto_')).sort();
+      keys.slice(0, Math.max(0, keys.length - 14)).forEach(k => localStorage.removeItem(k));
+      return 'ok:iPad (interne Kopie)';
+    } catch (e) { return 'err:' + e.message; }
+  },
   importBackup: () => {
     LC.pickFile('.json,application/json,text/plain').then((f) => {
       if (!f) return;

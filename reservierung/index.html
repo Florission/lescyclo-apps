@@ -777,5 +777,23 @@ function up(e){cleanup();const d=dg;dg=null;if(!d)return;
 renderTables();
 })();
 </script>
+<script>
+/* ---------- Automatische Tagessicherung beim Öffnen ---------- */
+(function(){
+function runAutoBackup(){try{
+  if(!A.autoBackup)return;const today=todayIso(),st=load("autobackup",{})||{};if(st.day===today)return;
+  const data=JSON.stringify({app:"lescyclo-reservierungen",version:1,created:new Date().toISOString(),reservierungen:res,gaeste:guests,einstellungen:cfg});
+  const r=String(A.autoBackup("Reservierungen_"+today+".json",data)||"");
+  if(r.startsWith("ok:"))save("autobackup",{day:today,where:r.slice(3),at:new Date().toISOString()});
+}catch(e){}}
+function showInfo(){const m=$("bMsg");if(!m)return;let el=$("abInfo");
+  if(!el){el=document.createElement("p");el.id="abInfo";el.className="note";m.before(el);}
+  const st=load("autobackup",{})||{};
+  el.textContent=st.day?("Automatische Sicherung: täglich beim Öffnen. Zuletzt "+short(st.day)+fromIso(st.day).getFullYear()+" → "+st.where):"Automatische Sicherung: täglich beim Öffnen der App.";}
+runAutoBackup();
+setInterval(runAutoBackup,60*60*1000);
+const _rs=renderSettings;renderSettings=function(){_rs.apply(this,arguments);showInfo();};
+})();
+</script>
 </body>
 </html>
