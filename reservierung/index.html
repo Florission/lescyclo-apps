@@ -687,8 +687,14 @@ const css=document.createElement("style");css.textContent=`
   box-shadow:-8px 0 24px rgba(0,0,0,.25);padding:12px;display:flex;flex-direction:column;gap:10px}
 #resDrawer .rdHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 #resDrawer .rdHead b{font-size:18px}
-#resDrawer .rdShift{display:flex;gap:6px;flex-wrap:wrap}
-#resDrawer .rdShift button{min-height:36px;padding:4px 10px}
+#resDrawer .rdTime{background:var(--accent-soft);border:2px solid var(--accent);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+#resDrawer .rdTimeLbl{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+#resDrawer .rdTimeRow{display:grid;grid-template-columns:auto auto 1fr auto auto;gap:6px;align-items:stretch}
+#resDrawer .rdTimeRow button{min-height:56px;min-width:52px;padding:4px 8px;font-size:17px;font-weight:700;background:var(--surface);border:2px solid var(--accent);color:var(--accent)}
+#resDrawer .rdTimeRow button:active{background:var(--accent);color:var(--accent-fg)}
+#resDrawer #fTime{min-height:56px;height:100%;font-size:30px;font-weight:800;text-align:center;font-family:var(--font-num);
+  background:var(--surface);color:var(--fg);border:2px solid var(--accent);border-radius:var(--r);padding:4px 6px;cursor:pointer;min-width:0}
+#resDrawer .rdTimeEnd{font-size:14px;color:var(--fg);text-align:center;font-weight:600}
 .tbl .rchips{display:flex;flex-direction:column;gap:2px;width:100%;padding:0 3px;margin-top:2px}
 .tbl .rchip{font:inherit;font-size:.78em;line-height:1.2;min-height:0!important;padding:1px 4px;border-radius:4px;
   background:#ffe9a8;color:#3d2f00;border:1px solid #d9a400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
@@ -707,10 +713,21 @@ const css=document.createElement("style");css.textContent=`
 const formPanel=$("form").closest(".panel"), grid=formPanel.parentElement;
 const drawer=document.createElement("div");drawer.id="resDrawer";drawer.hidden=true;
 drawer.innerHTML=`<div class="rdHead"><b id="rdTitle">Reservierung</b><button type="button" id="rdClose" aria-label="Schließen">✕</button></div>
-<div class="rdShift"><span class="note" style="align-self:center">Uhrzeit:</span>
-<button type="button" data-m="-30">−30 Min</button><button type="button" data-m="-15">−15</button>
-<button type="button" data-m="15">+15</button><button type="button" data-m="30">+30 Min</button></div>`;
+<div class="rdTime"><div class="rdTimeLbl">🕒 Uhrzeit</div>
+<div class="rdTimeRow"><button type="button" data-m="-30">−30</button><button type="button" data-m="-15">−15</button>
+<span id="rdTimeSlot" style="display:flex;min-width:0"></span>
+<button type="button" data-m="15">+15</button><button type="button" data-m="30">+30</button></div>
+<div class="rdTimeEnd" id="rdTimeEnd"></div></div>`;
 drawer.append(formPanel);document.body.append(drawer);
+/* Uhrzeitfeld groß in den Zeitblock oben holen */
+(function(){const ft=$("fTime"),lab=ft.closest("label"),row=lab&&lab.parentElement;
+  $("rdTimeSlot").append(ft);if(lab)lab.remove();if(row)row.style.gridTemplateColumns="1fr";
+  ft.setAttribute("aria-label","Uhrzeit");
+  ft.addEventListener("click",()=>{try{ft.showPicker&&ft.showPicker();}catch(e){}});})();
+const updEnd=()=>{const t=$("fTime").value,p=parseInt($("fPers").value)||0,el=$("rdTimeEnd");if(!el)return;
+  if(!t){el.textContent="Uhrzeit antippen zum Wählen";return;}const d=durFor(p);
+  el.textContent="Tisch belegt bis "+endOf(t,d)+" Uhr ("+(d%60?Math.floor(d/60)+"½":d/60)+" Std.)";};
+const _rtEnd=renderTables;renderTables=function(){const r=_rtEnd.apply(this,arguments);updEnd();return r;};
 grid.style.gridTemplateColumns="1fr";
 const hint=document.createElement("div");hint.id="planHint";
 hint.textContent="Tisch antippen = neue Reservierung · Reservierung antippen = ändern/löschen · Reservierung auf anderen Tisch ziehen = verschieben";
@@ -722,7 +739,7 @@ let tt=null;const toast=(t,k)=>{toastEl.textContent=t;toastEl.className=k||"";to
 const openD=()=>{drawer.hidden=false;$("rdTitle").textContent=editId?"Reservierung ändern":"Neue Reservierung";};
 const closeD=()=>{drawer.hidden=true;};
 $("rdClose").onclick=()=>{resetForm();say("");};
-drawer.querySelectorAll(".rdShift button").forEach(b=>b.onclick=()=>{const t=$("fTime").value||"18:00";
+drawer.querySelectorAll(".rdTimeRow button").forEach(b=>b.onclick=()=>{const t=$("fTime").value||"18:00";
   let m=(mins(t)+parseInt(b.dataset.m)+1440)%1440;$("fTime").value=pad(Math.floor(m/60))+":"+pad(m%60);renderTables();});
 
 const _say=say;say=function(t,k,el){_say(t,k,el);if(t&&(!el||el===$("msg"))&&drawer.hidden)toast(t,k==="err"?"err":"");};
