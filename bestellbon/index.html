@@ -122,6 +122,15 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .pl .x{min-height:38px;padding:2px 10px}.pl.off{opacity:.45}
 .tsum{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:15px}
 .tsum.big{font-size:22px;font-weight:700;border-top:2px solid var(--fg);padding-top:8px;font-family:var(--font-body)}
+.lnBtns{grid-column:2/4;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.lnBtns .noteBtn{grid-column:auto}
+.gangBtn{min-height:30px;padding:2px 10px;font-size:13px;font-weight:700}
+.gangBtn.later{background:var(--blue-soft);color:var(--blue);border-color:var(--blue)}
+.gangSel{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gangSel .seg button{min-height:34px;padding:4px 12px;font-size:14px}
+.gangSel .seg button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.gTag{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
+.gangCall{margin-top:6px}.gangCall button{flex:1}
 </style>
 </head>
 <body>
@@ -293,7 +302,8 @@ const sumL=ls=>(ls||[]).reduce((s,l)=>s+l.qty*l.price,0);
 const total=o=>sumL(o.lines);
 const DRINKS=["Softdrinks","Homemade & Smoothies","Kaffee & Tee","Bier, Wein & Bar"];
 const isFood=l=>!DRINKS.includes(l.cat||"");
-const sameLine=(a,b)=>a.name===b.name&&a.nr===b.nr&&a.variant===b.variant&&a.option===b.option&&a.price===b.price&&(a.note||"")===(b.note||"");
+const bonOrder=ls=>[...ls.filter(isFood),...ls.filter(l=>!isFood(l))];
+const sameLine=(a,b)=>a.name===b.name&&a.nr===b.nr&&a.variant===b.variant&&a.option===b.option&&a.price===b.price&&(a.note||"")===(b.note||"")&&(a.gang||1)===(b.gang||1);
 function lineName(l){return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(l.option?" · "+l.option:"");}
 
 /* Tische ↔ Bezeichnung „Tisch 21+22“ */
@@ -317,7 +327,7 @@ window.onBack=()=>{
   if(!$("tpBox").hidden)return $("tpBox").hidden=true;
   if(view==="tisch"&&mode==="pay"){mode="order";return renderTisch();}
   if(view!=="plan")show("plan");};
-function openTable(label){cur=label;mode="order";noteOpen=-1;say("");show("tisch");}
+function openTable(label){cur=label;gangSel=1;mode="order";noteOpen=-1;say("");show("tisch");}
 
 /* ---------- Tischplan ---------- */
 const pos=(el,t)=>{el.style.left=t.x/PW*100+"%";el.style.top=t.y/PH*100+"%";el.style.width=t.w/PW*100+"%";el.style.height=t.h/PH*100+"%";};
@@ -386,30 +396,38 @@ $("chAdd").onclick=finishPick;$("chCancel").onclick=()=>{$("chooser").hidden=tru
 $("chooser").onclick=e=>{if(e.target===$("chooser"))$("chooser").hidden=true;};
 
 function addLine(it,vi,opt){if(!cur)return;const v=it.variants[vi],dr=drafts[cur]||(drafts[cur]=[]);
-  const same=dr.find(l=>!l.note&&l.name===it.name&&l.nr===it.nr&&l.variant===v.label&&l.option===opt&&l.price===v.price);
-  if(same)same.qty++;else dr.push({cat:(menu[cat]||{}).name||"",nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:""});
+  const cn=(menu[cat]||{}).name||"",gg=DRINKS.includes(cn)?undefined:gangSel;
+  const same=dr.find(l=>!l.note&&l.gang===gg&&l.name===it.name&&l.nr===it.nr&&l.variant===v.label&&l.option===opt&&l.price===v.price);
+  if(same)same.qty++;else dr.push({cat:(menu[cat]||{}).name||"",nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:"",gang:gg});
   saveDrafts();mode="order";say("");renderSide();}
 
 /* ---------- Tisch: Rechnung (gebucht + neu) ---------- */
-let noteOpen=-1;
+let noteOpen=-1,gangSel=1;
 function renderTisch(){if(!cur)return show("plan");
   $("tTitle").textContent=cur;renderMenu();
   if(mode==="pay"&&!tabs[cur])mode="order";
   if(mode==="pay")renderPay();else renderSide();}
 function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   s.innerHTML=`<div class="sideHead"><h2>Rechnung ${esc(cur)}</h2>${t?`<span class="note">seit ${hm(new Date(t.opened))}</span>`:""}</div>
+    <div class="gangSel"><span class="note">Neue Speisen:</span><div class="seg" id="gSel"></div></div>
     <div class="lines" id="lines"></div>
     <div class="sum"><span>Gesamt</span><span>${eur((t?total(t):0)+sumL(dr))}</span></div>
     <div class="actions">${dr.length?`<button id="dClear" class="danger">Neue verwerfen</button>`:""}
       <button id="dBook" class="primary big" ${dr.length?"":"disabled"}>${dr.length?"Bonieren ("+dr.reduce((a,l)=>a+l.qty,0)+")":"Bonieren"}</button></div>
     <div class="actions"><button id="toPay" class="big grow" ${t&&!dr.length?"":"disabled"}>Abrechnen</button></div>
     ${t&&dr.length?`<p class="note">Zum Abrechnen erst die neuen Artikel bonieren.</p>`:""}`;
+  const gs=$("gSel");[1,2,3].forEach(g=>{const b=document.createElement("button");b.textContent=g+". Gang";if(g===gangSel)b.className="on";b.onclick=()=>{gangSel=g;renderSide();};gs.append(b);});
   const box=$("lines");
   if(!t&&!dr.length)box.innerHTML=`<div class="empty">Noch nichts bestellt. Links Gerichte antippen.</div>`;
   if(t){box.insertAdjacentHTML("beforeend",`<div class="grp">Boniert</div>`);
     t.lines.forEach(l=>{const d=document.createElement("div");d.className="ln booked";
-      d.innerHTML=`<span class="qn">${l.qty}×</span><div><div class="t">${esc(lineName(l))}</div>${l.note?`<div class="sub">${esc(l.note)}</div>`:""}</div><div class="p">${eur(l.qty*l.price)}</div>`;
-      box.append(d);});}
+      d.innerHTML=`<span class="qn">${l.qty}×</span><div><div class="t">${esc(lineName(l))}${isFood(l)&&(l.gang||1)>1?` <span class="gTag">${l.gang}. Gang</span>`:""}</div>${l.note?`<div class="sub">${esc(l.note)}</div>`:""}</div><div class="p">${eur(l.qty*l.price)}</div>`;
+      box.append(d);});
+    const pend=[...new Set(t.lines.filter(isFood).map(l=>l.gang||1))].filter(g=>g>1).sort();
+    if(pend.length){const gb=document.createElement("div");gb.className="actions gangCall";
+      for(const g of pend){const ok=(t.called||[]).includes(g),b=document.createElement("button");
+        b.textContent=ok?g+". Gang abgerufen ✓":g+". Gang abrufen";if(ok)b.disabled=true;else{b.className="primary";b.onclick=()=>callGang(cur,g);}gb.append(b);}
+      box.append(gb);}}
   if(dr.length){box.insertAdjacentHTML("beforeend",`<div class="grp new">Neu – noch nicht boniert</div>`);
     let focusMe=null;
     dr.forEach((l,i)=>{const d=document.createElement("div");d.className="ln fresh";
@@ -421,10 +439,13 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
       const tt=document.createElement("div");tt.innerHTML=`<div class="t">${esc(lineName(l))}</div>`+(l.qty>1?`<div class="sub">à ${eur(l.price)}</div>`:"");
       const pr=document.createElement("div");pr.className="p";pr.textContent=eur(l.qty*l.price);
       d.append(q,tt,pr);
+      const bx=document.createElement("div");bx.className="lnBtns";
+      if(isFood(l)){const gb=document.createElement("button");gb.className="gangBtn"+((l.gang||1)>1?" later":"");gb.textContent=(l.gang||1)+". Gang";gb.onclick=()=>{l.gang=(l.gang||1)%3+1;saveDrafts();renderSide();};bx.append(gb);}
       if(noteOpen===i){const inp=document.createElement("input");inp.value=l.note;inp.placeholder="Notiz, z. B. ohne Koriander";
         inp.onchange=()=>{l.note=inp.value.trim();saveDrafts();};inp.onblur=()=>{l.note=inp.value.trim();noteOpen=-1;saveDrafts();renderSide();};
         inp.onkeydown=e=>{if(e.key==="Enter")inp.blur();};d.append(inp);focusMe=inp;}
-      else{const nb=document.createElement("button");nb.className="noteBtn";nb.textContent=l.note?"Notiz: "+l.note:"+ Notiz";nb.onclick=()=>{noteOpen=i;renderSide();};d.append(nb);}
+      else{const nb=document.createElement("button");nb.className="noteBtn";nb.textContent=l.note?"Notiz: "+l.note:"+ Notiz";nb.onclick=()=>{noteOpen=i;renderSide();};bx.append(nb);}
+      if(bx.childNodes.length)d.append(bx);
       box.append(d);});
     if(focusMe)focusMe.focus();}
   if($("dClear"))$("dClear").onclick=()=>{const b=$("dClear");
@@ -433,18 +454,25 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   $("dBook").onclick=book;
   $("toPay").onclick=()=>{if(!tabs[cur]||draftOf(cur).length)return;mode="pay";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();};}
 
-/* Bonieren: Küchenbon (nur Speisen) drucken, dann auf den Tisch buchen */
+/* Bonieren: Küchenbon (Speisen nach Gängen) + separater Getränkebon, dann auf den Tisch buchen */
 function book(){const dr=draftOf(cur);if(!dr.length)return;
-  const label=cur,when=new Date(),snap=clone(dr),food=snap.filter(isFood);
+  const label=cur,when=new Date(),snap=clone(dr),food=snap.filter(isFood),drinks=snap.filter(l=>!isFood(l));
   const done=()=>{const t=tabs[label]||(tabs[label]={label,lines:[],opened:when.toISOString()});
     for(const l of snap){const s=t.lines.find(x=>sameLine(x,l));if(s)s.qty+=l.qty;else t.lines.push(clone(l));}
     delete drafts[label];saveTabs();saveDrafts();noteOpen=-1;
-    show("plan");say(`Boniert auf ${label}: ${eur(sumL(snap))}`+(food.length?" – Küchenbon gedruckt.":" (nur Getränke, kein Küchenbon)."),"ok",$("pMsg"));};
-  if(!food.length)return done();
-  $("dBook").disabled=true;say("Küchenbon wird gedruckt …");
-  sendRaw(kitchenBytes({label,lines:food},when),(ok,err)=>{
-    if(!ok){if(view==="tisch"&&cur===label&&mode==="order")renderSide();return say("Küchenbon nicht gedruckt – Drucker prüfen ("+err+"). Die Bestellung ist noch NICHT gebucht.","err");}
+    show("plan");say(`Boniert auf ${label}: ${eur(sumL(snap))} – `+[food.length?"Küchenbon"+(new Set(food.map(gangOf)).size>1?"s":""):"",drinks.length?"Getränkebon":""].filter(Boolean).join(" + ")+" gedruckt.","ok",$("pMsg"));};
+  $("dBook").disabled=true;say("Bons werden gedruckt …");
+  sendRaw(orderBytes(label,snap,when,(tabs[label]||{}).called),(ok,err)=>{
+    if(!ok){if(view==="tisch"&&cur===label&&mode==="order")renderSide();return say("Bons nicht gedruckt – Drucker prüfen ("+err+"). Die Bestellung ist noch NICHT gebucht.","err");}
     done();});}
+/* Gang abrufen: Abruf-Bon für die Küche */
+function callGang(label,g){const t=tabs[label];if(!t)return;
+  const ls=t.lines.filter(l=>isFood(l)&&(l.gang||1)===g);if(!ls.length)return;
+  say(g+". Gang wird abgerufen …");
+  sendRaw(kitchenBytes({label,lines:ls,title:"ABRUF",sub:g+". GANG"},new Date()),(ok,err)=>{
+    if(!ok)return say("Abruf nicht gedruckt – Drucker prüfen ("+err+").","err");
+    t.called=[...new Set([...(t.called||[]),g])];saveTabs();
+    if(view==="tisch"&&cur===label&&mode==="order")renderSide();say(g+". Gang abgerufen.","ok");});}
 
 /* Abrechnen: alles vorausgewählt, für getrennt zahlen Anzahl anpassen */
 let pay=[],disc=0,armed="";
@@ -460,7 +488,7 @@ function renderPay(){const d=$("side"),t=tabs[cur];if(!t){mode="order";return re
   ${disc?`<div class="tsum"><span>Rabatt ${disc} %</span><span>-${eur(dv)}</span></div>`:""}
   <div class="tsum big"><span>Zu zahlen</span><span>${eur(sub-dv)}</span></div>
   <div class="actions"><button id="tPaid">Ohne Druck abrechnen</button><button id="tBill" class="primary big">Rechnung drucken</button></div>
-  <div class="actions"><button id="tKitchen">Küchenbon nachdrucken</button></div>`;
+  <div class="actions"><button id="tKitchen">Bon nachdrucken</button></div>`;
   $("tBackOrder").onclick=()=>{mode="order";say("");renderSide();};
   const lb=$("tLines");
   t.lines.forEach((l,i)=>{const r=document.createElement("div");r.className="pl"+(pay[i]?"":" off");
@@ -495,8 +523,8 @@ function renderPay(){const d=$("side"),t=tabs[cur];if(!t){mode="order";return re
       settle(sel,when,true);});};
   $("tPaid").onclick=()=>{const sel=selection();if(!sel.length)return say("Nichts ausgewählt.","err");
     if(armed!=="paid"){armed="paid";$("tPaid").textContent="Wirklich abrechnen?";return;}settle(sel,new Date(),false);};
-  $("tKitchen").onclick=()=>{const food=selection().filter(isFood);if(!food.length)return say("Keine Speisen ausgewählt.","err");
-    sendRaw(kitchenBytes({label:t.label,lines:food},new Date()),(ok,err)=>say(ok?"Küchenbon gedruckt.":"Drucken fehlgeschlagen ("+err+").",ok?"ok":"err"));};}
+  $("tKitchen").onclick=()=>{const items=selection();if(!items.length)return say("Nichts ausgewählt.","err");
+    sendRaw(orderBytes(t.label,items,new Date(),t.called),(ok,err)=>say(ok?"Bons nachgedruckt.":"Drucken fehlgeschlagen ("+err+").",ok?"ok":"err"));};}
 
 /* Tisch wechseln / zusammenlegen */
 let moveSel=[];
@@ -576,19 +604,48 @@ function bonText(o,when){const W=parseInt(cfg.width)||48;
   return bonBlocks(o,when).map(k=>{if(k.rule)return k.rule[0]+k.rule[1].repeat(W-2)+k.rule[2];
     const {pl,pr}=bonRow(k,W),t=k.s===2?String(k.t).split("").map(c=>c+" ").join(""):k.t;
     return "║ "+" ".repeat(pl)+t+" ".repeat(pr)+" ║";}).join("\n");}
+function gangOf(l){return isFood(l)?(l.gang||1):0;}
 function kitchenBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2),W3=Math.floor(W/3);
   const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
   const sz=s=>b.push(GS,0x21,s),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a),inv=v=>b.push(GS,0x42,v?1:0);
-  al(1);sz(0x11);bold(1);n("KÜCHE");nl();
+  const called=o.called||[],lines=[...o.lines].sort((x,y)=>gangOf(x)-gangOf(y));
+  const gangs=[...new Set(lines.map(gangOf))],heads=!o.sub&&(gangs.length>1||gangs.some(g=>g>1));
+  al(1);sz(0x11);bold(1);n(o.title||"KÜCHE");nl();
+  if(o.sub){inv(1);n(" "+o.sub+" ");inv(0);nl();}
   sz(0x22);wrap(o.label,W3).forEach(x=>{n(x);nl();});
   sz(0x00);bold(0);n(stamp(when));nl();
   al(0);n("=".repeat(W));nl();nl();
-  for(const l of o.lines){sz(0x11);bold(1);
+  let g0=null;
+  for(const l of lines){const g=gangOf(l);
+    if(heads&&g!==g0){g0=g;const wait=g>1&&!called.includes(g);
+      al(1);sz(0x11);bold(1);if(wait)inv(1);n(" "+g+". GANG ");if(wait)inv(0);nl();
+      sz(0x00);n(wait?"- warten auf Abruf -":"- sofort -");nl();bold(0);al(0);n("-".repeat(W));nl();}
+    sz(0x11);bold(1);
     wrap(`${l.qty}x ${lineName(l)}`,W2-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});
     if(l.note){inv(1);wrap(">> "+l.note,W2-2).forEach(x=>{n(" "+x+" ");nl();});inv(0);}
     bold(0);sz(0);nl();}
   n("=".repeat(W));nl();
   b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
+/* Getränkebon: separat, kleinere Schrift */
+function drinkBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2);
+  const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
+  const sz=s=>b.push(GS,0x21,s),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a);
+  al(1);sz(0x01);bold(1);n("GETRÄNKE");nl();
+  sz(0x11);wrap(o.label,W2).forEach(x=>{n(x);nl();});
+  sz(0x00);bold(0);n(stamp(when));nl();
+  al(0);n("=".repeat(W));nl();
+  for(const l of o.lines){bold(1);
+    wrap(`${l.qty}x ${lineName(l)}`,W-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});bold(0);
+    if(l.note)wrap(">> "+l.note,W-3).forEach(x=>{n("   "+x);nl();});}
+  n("=".repeat(W));nl();
+  b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,5,GS,0x56,66,0);return b;}
+/* Küchenbons (je Gang einer) + Getränkebon als ein Druckauftrag */
+function orderBytes(label,lines,when,called){const f=lines.filter(isFood),d=lines.filter(l=>!isFood(l));
+  const c=called||[],gangs=[...new Set(f.map(gangOf))].sort((x,y)=>x-y),multi=gangs.length>1||gangs.some(g=>g>1),out=[];
+  /* jeder Gang ein eigener Küchenbon */
+  for(const g of gangs)out.push(...kitchenBytes({label,lines:f.filter(l=>gangOf(l)===g),called:c,sub:multi?g+". GANG - "+(g>1&&!c.includes(g)?"AUF ABRUF":"SOFORT"):""},when));
+  if(d.length)out.push(...drinkBytes({label,lines:d},when));
+  return out;}
 window.kitchenBytes=kitchenBytes;
 function b64(arr){let s="";for(let i=0;i<arr.length;i+=4096)s+=String.fromCharCode.apply(null,arr.slice(i,i+4096));return btoa(s);}
 
