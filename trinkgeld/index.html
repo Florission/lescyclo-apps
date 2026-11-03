@@ -5,7 +5,9 @@
 <script src="store.js" data-app="trinkgeld"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script><script src="shim.js"></script>
 
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
+<script>/* kein Zoomen per Doppeltipp/Zwei-Finger */document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});</script>
 <title>Trinkgeldliste Le's Cyclo</title>
 <style>
 :root{
