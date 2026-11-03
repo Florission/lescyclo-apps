@@ -5,7 +5,9 @@
 <script src="store.js" data-app="bestellbon"></script><script src="shim.js"></script>
 
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
+<script>/* kein Zoomen per Doppeltipp/Zwei-Finger */document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});</script>
 <title>Bestellbon Le's Cyclo</title>
 <style>
 :root{
@@ -255,6 +257,10 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
     <h2 id="chTitle"></h2>
     <div id="chVarL"><div class="note" style="margin-bottom:6px">Größe</div><div class="seg" id="chVar"></div></div>
     <div id="chOptL"><div class="note" style="margin-bottom:6px">Auswahl</div><div class="seg" id="chOpt"></div></div>
+    <div id="chDrL"><div class="note" style="margin-bottom:6px">Getränk (klein)</div><div class="seg" id="chDr"></div></div>
+    <div id="chFreeL"><label class="note" for="chFreeTxt">Bezeichnung (optional)</label><input id="chFreeTxt" placeholder="z. B. Reis extra">
+      <label class="note" for="chFreePr" style="display:block;margin-top:8px">Preis in €</label><input id="chFreePr" inputmode="decimal" placeholder="0,00"></div>
+    <div id="chExL"><div class="note" style="margin-bottom:6px">Extras (mehrere möglich)</div><div class="seg" id="chEx"></div></div>
     <div class="actions"><button id="chCancel">Abbrechen</button><button id="chAdd" class="primary big">Hinzufügen</button></div>
   </div>
 </div>
@@ -268,7 +274,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 
 <script>
 const $=id=>document.getElementById(id);
-const DEFAULT_MENU=[{"name":"Softdrinks","items":[{"nr":"","name":"Fritz","desc":"","variants":[{"label":"0,2l","price":350}],"options":["Kola","Kola zuckerfrei","Zitrone","Orange","MischMasch","Rhabarberschorle"]},{"nr":"","name":"Nektar","desc":"","variants":[{"label":"0,2l","price":390},{"label":"0,4l","price":620}],"options":["Mango","Maracuja","Apfel","Mango Schorle","Maracuja Schorle","Apfel Schorle"]},{"nr":"","name":"Wasser Purezza","desc":"","variants":[{"label":"0,3l","price":390},{"label":"0,75l","price":650}],"options":["still","sprudelig"]}]},{"name":"Homemade & Smoothies","items":[{"nr":"","name":"Da Chanh 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Green Ice Tea 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Coriander Mule (virgin) 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Red Sensation 0,5l","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"","name":"Gold Buddha 0,4l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Good Morning Vietnam 0,4l","desc":"","variants":[{"label":"","price":590}],"options":[]}]},{"name":"Kaffee & Tee","items":[{"nr":"","name":"Ca Phe Den","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Ca Phe Sua","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Ca Phe Sua Da","desc":"","variants":[{"label":"","price":520}],"options":[]},{"nr":"","name":"Tra Gung","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Sen","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Xa","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Chanh Xa","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tra Ky Tu","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Cung Dinh Hue","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Hoa Hong","desc":"","variants":[{"label":"","price":490}],"options":[]}]},{"name":"Bier, Wein & Bar","items":[{"nr":"","name":"Tiger Bier vom Fass","desc":"","variants":[{"label":"0,3l","price":450},{"label":"0,5l","price":590}],"options":[]},{"nr":"","name":"Erdinger Weizen alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tannenzäpfle Pils alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Riesling Plaisir 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Sauvignon Damaszenerstahl 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Rosé Federstahl 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Rouge Terres de Safres 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Cyclo's Delight","desc":"","variants":[{"label":"","price":990}],"options":[]},{"nr":"","name":"Cyclo's Mule","desc":"","variants":[{"label":"","price":1190}],"options":[]},{"nr":"","name":"Hanoi Mule","desc":"","variants":[{"label":"","price":1150}],"options":[]},{"nr":"","name":"Dragon's Gin & Tonic","desc":"","variants":[{"label":"","price":1390}],"options":[]},{"nr":"","name":"Rhabarber Fritz 43","desc":"","variants":[{"label":"","price":1090}],"options":[]},{"nr":"","name":"Nep Moi","desc":"","variants":[{"label":"","price":450}],"options":[]}]},{"name":"Vorspeisen","items":[{"nr":"1","name":"Goi Cuon","desc":"","variants":[{"label":"","price":690}],"options":["Original","vegan"]},{"nr":"2","name":"Ha Gao Tom","desc":"","variants":[{"label":"","price":590}],"options":[]},{"nr":"3","name":"Com Chien (vegan)","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"4","name":"Com Chien Tom","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"5","name":"Dim Sum","desc":"","variants":[{"label":"","price":850}],"options":["Original","vegan"]},{"nr":"6","name":"Nom Xoai Thit Bo","desc":"","variants":[{"label":"","price":990}],"options":["Original","vegan"]}]},{"name":"Hauptspeisen","items":[{"nr":"7","name":"Pho","desc":"","variants":[{"label":"","price":1490}],"options":["Bo (Rind)","Ga (Huhn)","Chay (Tofu)","Chay vegan"]},{"nr":"8","name":"Pho Xao","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"9","name":"Bun Nem Ran Hanoi","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"10","name":"Banh Bao Burger","desc":"","variants":[{"label":"","price":1690}],"options":["Original","vegan"]},{"nr":"11","name":"Ga Cuon La Chanh","desc":"","variants":[{"label":"","price":1490}],"options":[]},{"nr":"12","name":"Com Cari Sua Dua","desc":"","variants":[{"label":"","price":1490}],"options":["Original","vegan"]},{"nr":"13","name":"Com Thit Lon Xa Xiu","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"14","name":"Bun Cha Thap Cam","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"15","name":"Ca Hoi Nuong","desc":"","variants":[{"label":"","price":2090}],"options":[]},{"nr":"16","name":"Vit Chay (vegan)","desc":"","variants":[{"label":"","price":1790}],"options":[]},{"nr":"17","name":"Die Vielfalt Vietnams","desc":"","variants":[{"label":"","price":3890}],"options":["Original","vegan"]}]},{"name":"Vegan Bowls & Kids","items":[{"nr":"18","name":"Buddha Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"19","name":"Shrimp\"less\" Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"20","name":"Cyclo's Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"21","name":"Monk Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"22","name":"Kids Menü","desc":"","variants":[{"label":"","price":990}],"options":["Original","vegan"]}]},{"name":"Nachspeisen","items":[{"nr":"23","name":"Banh Ran","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"24","name":"Mochi","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"25","name":"Chuoi Nep","desc":"","variants":[{"label":"","price":590}],"options":[]}]}];
+const DEFAULT_MENU=[{"name":"Softdrinks","items":[{"nr":"","name":"Fritz","desc":"","variants":[{"label":"0,2l","price":350}],"options":["Kola","Kola zuckerfrei","Zitrone","Orange","MischMasch","Rhabarberschorle"]},{"nr":"","name":"Nektar","desc":"","variants":[{"label":"0,2l","price":390},{"label":"0,4l","price":620}],"options":["Mango","Maracuja","Apfel","Mango Schorle","Maracuja Schorle","Apfel Schorle"]},{"nr":"","name":"Wasser Purezza","desc":"","variants":[{"label":"0,3l","price":390},{"label":"0,75l","price":650}],"options":["still","sprudelig"]}]},{"name":"Homemade & Smoothies","items":[{"nr":"","name":"Da Chanh 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Green Ice Tea 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Coriander Mule (virgin) 0,5l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Red Sensation 0,5l","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"","name":"Gold Buddha 0,4l","desc":"","variants":[{"label":"","price":620}],"options":[]},{"nr":"","name":"Good Morning Vietnam 0,4l","desc":"","variants":[{"label":"","price":590}],"options":[]}]},{"name":"Kaffee & Tee","items":[{"nr":"","name":"Ca Phe Den","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Ca Phe Sua","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Ca Phe Sua Da","desc":"","variants":[{"label":"","price":520}],"options":[]},{"nr":"","name":"Tra Gung","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Sen","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Xa","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"","name":"Tra Chanh Xa","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tra Ky Tu","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Cung Dinh Hue","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"","name":"Tra Hoa Hong","desc":"","variants":[{"label":"","price":490}],"options":[]}]},{"name":"Bier, Wein & Bar","items":[{"nr":"","name":"Tiger Bier vom Fass","desc":"","variants":[{"label":"0,3l","price":450},{"label":"0,5l","price":590}],"options":[]},{"nr":"","name":"Erdinger Weizen alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Tannenzäpfle Pils alkoholfrei 0,3l","desc":"","variants":[{"label":"","price":450}],"options":[]},{"nr":"","name":"Riesling Plaisir 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Sauvignon Damaszenerstahl 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Rosé Federstahl 0,2l","desc":"","variants":[{"label":"","price":790}],"options":[]},{"nr":"","name":"Rouge Terres de Safres 0,2l","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"","name":"Cyclo's Delight","desc":"","variants":[{"label":"","price":990}],"options":[]},{"nr":"","name":"Cyclo's Mule","desc":"","variants":[{"label":"","price":1190}],"options":[]},{"nr":"","name":"Hanoi Mule","desc":"","variants":[{"label":"","price":1150}],"options":[]},{"nr":"","name":"Dragon's Gin & Tonic","desc":"","variants":[{"label":"","price":1390}],"options":[]},{"nr":"","name":"Rhabarber Fritz 43","desc":"","variants":[{"label":"","price":1090}],"options":[]},{"nr":"","name":"Nep Moi","desc":"","variants":[{"label":"","price":450}],"options":[]}]},{"name":"Vorspeisen","items":[{"nr":"1","name":"Goi Cuon","desc":"","variants":[{"label":"","price":690}],"options":["Fleisch","vegan"]},{"nr":"2","name":"Ha Gao Tom","desc":"","variants":[{"label":"","price":590}],"options":[]},{"nr":"3","name":"Com Chien (vegan)","desc":"","variants":[{"label":"","price":690}],"options":[]},{"nr":"4","name":"Com Chien Tom","desc":"","variants":[{"label":"","price":890}],"options":[]},{"nr":"5","name":"Dim Sum","desc":"","variants":[{"label":"","price":850}],"options":["Fleisch","vegan"]},{"nr":"6","name":"Nom Xoai Thit Bo","desc":"","variants":[{"label":"","price":990}],"options":["Fleisch","vegan"]}]},{"name":"Hauptspeisen","items":[{"nr":"7","name":"Pho","desc":"","variants":[{"label":"","price":1490}],"options":["Bo (Rind)","Ga (Huhn)","Chay (Tofu)","Chay vegan"]},{"nr":"8","name":"Pho Xao","desc":"","variants":[{"label":"","price":1490}],"options":["Fleisch","vegan"]},{"nr":"9","name":"Bun Nem Ran Hanoi","desc":"","variants":[{"label":"","price":1490}],"options":["Fleisch","vegan"]},{"nr":"10","name":"Banh Bao Burger","desc":"","variants":[{"label":"","price":1690}],"options":["Fleisch","vegan"]},{"nr":"11","name":"Ga Cuon La Chanh","desc":"","variants":[{"label":"","price":1490}],"options":[]},{"nr":"12","name":"Com Cari Sua Dua","desc":"","variants":[{"label":"","price":1490}],"options":["Fleisch","vegan"]},{"nr":"13","name":"Com Thit Lon Xa Xiu","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"14","name":"Bun Cha Thap Cam","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"15","name":"Ca Hoi Nuong","desc":"","variants":[{"label":"","price":2090}],"options":[]},{"nr":"16","name":"Vit Chay (vegan)","desc":"","variants":[{"label":"","price":1790}],"options":[]},{"nr":"17","name":"Die Vielfalt Vietnams","desc":"","variants":[{"label":"","price":3890}],"options":["Fleisch","vegan"]}]},{"name":"Vegan Bowls & Kids","items":[{"nr":"18","name":"Buddha Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"19","name":"Shrimp\"less\" Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"20","name":"Cyclo's Bowl","desc":"","variants":[{"label":"","price":1590}],"options":[]},{"nr":"21","name":"Monk Bowl","desc":"","variants":[{"label":"","price":1690}],"options":[]},{"nr":"22","name":"Kids Menü","desc":"","variants":[{"label":"","price":990}],"options":["Hühnchen","vegan"],"drinks":["Fritz Kola 0,2l","Fritz Kola zuckerfrei 0,2l","Fritz Zitrone 0,2l","Fritz Orange 0,2l","Fritz MischMasch 0,2l","Fritz Rhabarberschorle 0,2l","Mangosaft 0,2l","Maracujasaft 0,2l","Apfelsaft 0,2l","Mango Schorle 0,2l","Maracuja Schorle 0,2l","Apfel Schorle 0,2l","Wasser sprudelig 0,3l","Wasser still 0,3l"]}]},{"name":"Nachspeisen","items":[{"nr":"23","name":"Banh Ran","desc":"","variants":[{"label":"","price":420}],"options":[]},{"nr":"24","name":"Mochi","desc":"","variants":[{"label":"","price":490}],"options":[]},{"nr":"25","name":"Chuoi Nep","desc":"","variants":[{"label":"","price":590}],"options":[]}]},{"name":"Extras","items":[]},{"name":"Divers","items":[{"nr":"","name":"Speisen Divers","desc":"","variants":[{"label":"","price":0}],"options":[],"free":"food"},{"nr":"","name":"Getränke Divers","desc":"","variants":[{"label":"","price":0}],"options":[],"free":"drink"}]}];
 const PLAN=[{"id":"33","area":"Innen","seats":2,"shape":"rect","x":20,"y":0,"w":70,"h":70},{"id":"34","area":"Innen","seats":2,"shape":"rect","x":90,"y":0,"w":70,"h":70},{"id":"31","area":"Innen","seats":2,"shape":"rect","x":10,"y":100,"w":70,"h":70},{"id":"32","area":"Innen","seats":2,"shape":"rect","x":80,"y":100,"w":70,"h":70},{"id":"30","area":"Innen","seats":2,"shape":"rect","x":0,"y":180,"w":70,"h":70},{"id":"23","area":"Innen","seats":3,"shape":"rect","x":0,"y":280,"w":70,"h":70},{"id":"22","area":"Innen","seats":2,"shape":"rect","x":0,"y":410,"w":70,"h":70},{"id":"21","area":"Innen","seats":2,"shape":"rect","x":80,"y":410,"w":70,"h":70},{"id":"20","area":"Innen","seats":2,"shape":"rect","x":10,"y":550,"w":70,"h":70},{"id":"19","area":"Innen","seats":2,"shape":"rect","x":80,"y":550,"w":70,"h":70},{"id":"18","area":"Innen","seats":2,"shape":"rect","x":170,"y":550,"w":70,"h":70},{"id":"35","area":"Innen","seats":2,"shape":"rect","x":360,"y":10,"w":70,"h":70},{"id":"36","area":"Innen","seats":2,"shape":"rect","x":360,"y":140,"w":70,"h":70},{"id":"10","area":"Innen","seats":3,"shape":"rect","x":290,"y":350,"w":70,"h":140},{"id":"16","area":"Innen","seats":2,"shape":"rect","x":400,"y":480,"w":70,"h":70},{"id":"17","area":"Innen","seats":2,"shape":"rect","x":400,"y":550,"w":70,"h":70},{"id":"13","area":"Innen","seats":2,"shape":"rect","x":680,"y":350,"w":70,"h":70},{"id":"14","area":"Innen","seats":2,"shape":"rect","x":680,"y":420,"w":70,"h":70},{"id":"15","area":"Innen","seats":2,"shape":"rect","x":680,"y":510,"w":70,"h":70},{"id":"Küche","area":"Innen","seats":0,"shape":"deko","x":460,"y":0,"w":120,"h":190},{"id":"Wand 1","area":"Innen","seats":0,"shape":"deko","wall":true,"x":430,"y":0,"w":20,"h":240},{"id":"Wand 2","area":"Innen","seats":0,"shape":"deko","wall":true,"x":170,"y":250,"w":590,"h":10},{"id":"Wand 3","area":"Innen","seats":0,"shape":"deko","wall":true,"x":0,"y":250,"w":90,"h":10},{"id":"Wand 4","area":"Innen","seats":0,"shape":"deko","wall":true,"x":270,"y":280,"w":20,"h":90},{"id":"Wand 5","area":"Innen","seats":0,"shape":"deko","wall":true,"x":290,"y":330,"w":460,"h":20},{"id":"Wand 6","area":"Innen","seats":0,"shape":"deko","wall":true,"x":550,"y":570,"w":20,"h":60},{"id":"Pflanze","area":"Innen","seats":0,"shape":"deko","x":290,"y":300,"w":40,"h":40}], PW=1000, PH=625;
 const TIDS=PLAN.filter(t=>t.shape!=="deko").map(t=>t.id);
 const A=window.Android||{
@@ -280,6 +286,16 @@ const load=(k,d)=>{try{const s=A.load(k);return s?JSON.parse(s):d;}catch(e){retu
 const save=(k,v)=>A.save(k,JSON.stringify(v));
 const clone=o=>JSON.parse(JSON.stringify(o));
 let menu=load("speisekarte",null)||clone(DEFAULT_MENU);
+/* Speisekarte v2: Fleisch/vegan, Kids-Getränk, Extras, Divers */
+(function(){if((load("kartenVersion",1)||1)>=2)return;
+  const D=n=>DEFAULT_MENU.find(c=>c.name===n);
+  for(const c of menu)for(const it of c.items){
+    if(it.options.includes("vegan")&&it.options.includes("Original"))it.options=it.options.map(o=>o==="Original"?"Fleisch":o);
+    if(/^kids/i.test(it.name)){it.options=["Hühnchen","vegan"];it.drinks=clone(D("Vegan Bowls & Kids").items.find(x=>x.name==="Kids Menü").drinks);}}
+  for(const n of ["Extras","Divers"]){const d=D(n),have=menu.find(c=>c.name===n);
+    if(!have)menu.push(clone(d));else for(const it of d.items)if(!have.items.some(x=>x.name===it.name))have.items.push(clone(it));}
+  saveMenuQuiet();save("kartenVersion",2);})();
+function saveMenuQuiet(){save("speisekarte",menu);}
 let cfg=Object.assign({ip:"",port:9100,width:48,head:"LC-POTSDAM",foot:"Keine Rechnung - kein Kassenbeleg"},load("einstellungen",{}));
 if(cfg.head==="Le's Cyclo")cfg.head="LC-POTSDAM";
 let hist=load("bons",[]);
@@ -300,11 +316,17 @@ function say(t,k,el){const m=el||$("msg");m.textContent=t;m.className="msg "+(k|
 const saveMenu=()=>{if(!save("speisekarte",menu))say("Speichern hat nicht geklappt!","err",$("kMsg"));};
 const sumL=ls=>(ls||[]).reduce((s,l)=>s+l.qty*l.price,0);
 const total=o=>sumL(o.lines);
-const DRINKS=["Softdrinks","Homemade & Smoothies","Kaffee & Tee","Bier, Wein & Bar"];
-const isFood=l=>!DRINKS.includes(l.cat||"");
+const DRINKS=["Softdrinks","Homemade & Smoothies","Kaffee & Tee","Bier, Wein & Bar","Getränke Divers"];
+const isFood=l=>!l.drink&&!DRINKS.includes(l.cat||"");
 const bonOrder=ls=>[...ls.filter(isFood),...ls.filter(l=>!isFood(l))];
-const sameLine=(a,b)=>a.name===b.name&&a.nr===b.nr&&a.variant===b.variant&&a.option===b.option&&a.price===b.price&&(a.note||"")===(b.note||"")&&(a.gang||1)===(b.gang||1);
-function lineName(l){return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(l.option?" · "+l.option:"");}
+const exKey=l=>(l.extras||[]).join("|");
+const sameLine=(a,b)=>a.name===b.name&&a.nr===b.nr&&a.variant===b.variant&&a.option===b.option&&a.price===b.price&&(a.note||"")===(b.note||"")&&(a.gang||1)===(b.gang||1)&&exKey(a)===exKey(b);
+const exTxt=l=>(l.extras||[]).map(x=>" + "+x).join("");
+function lineName(l){return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(l.option?" · "+l.option:"")+exTxt(l);}
+/* Druck: Fleisch → thit, vegan → chay */
+const OPT_PRINT={"Fleisch":"thit","Original":"thit","Hühnchen":"thit","vegan":"chay"};
+function printName(l){const o=l.option?(OPT_PRINT[l.option]||l.option):"";
+  return (l.nr?l.nr+". ":"")+l.name+(l.variant?" "+l.variant:"")+(o?" · "+o:"")+exTxt(l);}
 
 /* Tische ↔ Bezeichnung „Tisch 21+22“ */
 function tablesOf(label){const m=String(label).match(/^Tisch\s+(\d+(?:\s*\+\s*\d+)*)$/i);return m?m[1].split("+").map(s=>s.trim()):[];}
@@ -379,26 +401,57 @@ function renderMenu(){
     b.innerHTML=`<span class="nm">${it.nr?`<span class="nr">${esc(it.nr)}.</span>`:""}${esc(it.name)}</span><span class="pr">${esc(priceText(it))}</span>`;
     b.onclick=()=>pick(it);ib.append(b);});
 }
-let chItem=null,chV=0,chO=0;
+let chItem=null,chV=0,chO=0,chD=-1,chMode="pick",chLine=null,chEx=[];
+function chShow(){["chVarL","chOptL","chDrL","chFreeL","chExL"].forEach(id=>$(id).hidden=true);}
 function pick(it){
-  if(it.variants.length<=1&&!it.options.length)return addLine(it,0,"");
-  chItem=it;chV=0;chO=0;$("chTitle").textContent=(it.nr?it.nr+". ":"")+it.name;
-  $("chVarL").hidden=it.variants.length<=1;$("chOptL").hidden=!it.options.length;
+  if(it.free)return pickFree(it);
+  const drinks=it.drinks||[];
+  if(it.variants.length<=1&&!it.options.length&&!drinks.length)return addLine(it,0,"");
+  chMode="pick";chItem=it;chV=0;chO=drinks.length?-1:0;chD=-1;$("chTitle").textContent=(it.nr?it.nr+". ":"")+it.name;chShow();
+  $("chVarL").hidden=it.variants.length<=1;$("chOptL").hidden=!it.options.length;$("chDrL").hidden=!drinks.length;
   renderChooser();$("chooser").hidden=false;}
+function pickFree(it){chMode="free";chItem=it;chShow();$("chTitle").textContent=it.name;$("chFreeL").hidden=false;
+  $("chFreeTxt").value="";$("chFreePr").value="";$("chooser").hidden=false;setTimeout(()=>$("chFreePr").focus(),50);}
+const extrasList=()=>{const c=menu.find(x=>x.name==="Extras");return c?c.items.filter(i=>i.variants.length):[];};
+function openExtras(l){chMode="extras";chLine=l;chEx=[...(l.extras||[])];chShow();$("chTitle").textContent="Extras zu "+l.name;
+  $("chExL").hidden=false;renderExtras();$("chooser").hidden=false;}
+function renderExtras(){const b=$("chEx");b.textContent="";const ex=extrasList();
+  if(!ex.length)b.innerHTML='<div class="note">Noch keine Extras – unter „Speisekarte“ in der Kategorie „Extras“ anlegen.</div>';
+  ex.forEach(it=>{const v=it.variants[0],n=it.name,x=document.createElement("button");x.className="big"+(chEx.includes(n)?" on":"");
+    x.textContent=n+" · "+eur(v.price);x.onclick=()=>{chEx=chEx.includes(n)?chEx.filter(y=>y!==n):[...chEx,n];renderExtras();};b.append(x);});}
+const exPrice=names=>names.reduce((s,n)=>{const it=extrasList().find(i=>i.name===n);return s+(it?it.variants[0].price:0);},0);
 function renderChooser(){const it=chItem;
   const vb=$("chVar");vb.textContent="";it.variants.forEach((v,i)=>{const b=document.createElement("button");b.className="big";
     b.textContent=(v.label||"Standard")+" · "+eur(v.price);if(i===chV)b.classList.add("on");
     b.onclick=()=>{chV=i;if(!it.options.length)return finishPick();renderChooser();};vb.append(b);});
+  const dr=it.drinks||[];
   const ob=$("chOpt");ob.textContent="";it.options.forEach((o,i)=>{const b=document.createElement("button");b.className="big";b.textContent=o;if(i===chO)b.classList.add("on");
-    b.onclick=()=>{chO=i;if(it.variants.length<=1)return finishPick();renderChooser();};ob.append(b);});}
-function finishPick(){$("chooser").hidden=true;addLine(chItem,chV,chItem.options[chO]||"");}
-$("chAdd").onclick=finishPick;$("chCancel").onclick=()=>{$("chooser").hidden=true;};
+    b.onclick=()=>{chO=i;if(it.variants.length<=1&&(!dr.length||chD>=0))return finishPick();renderChooser();};ob.append(b);});
+  const db=$("chDr");db.textContent="";dr.forEach((d,i)=>{const b=document.createElement("button");b.className="big";b.textContent=d;if(i===chD)b.classList.add("on");
+    b.onclick=()=>{chD=i;if(chO>=0&&it.variants.length<=1)return finishPick();renderChooser();};db.append(b);});}
+function finishPick(){
+  if(chMode==="free"){const pr=Math.round(parseFloat(String($("chFreePr").value).replace(",","."))*100);
+    if(!(pr>=0)||$("chFreePr").value.trim()==="")return say("Bitte einen Preis eingeben.","err");
+    const t=$("chFreeTxt").value.trim(),drink=chItem.free==="drink";$("chooser").hidden=true;
+    return addLine(chItem,0,t,{price:pr,drink,cat:drink?"Getränke Divers":"Speisen Divers"});}
+  if(chMode==="extras"){const l=chLine,dr=draftOf(cur);$("chooser").hidden=true;if(!l)return;
+    const base=l.price-exPrice(l.extras||[]);
+    if(l.qty>1&&chEx.length&&!(l.extras||[]).length){l.qty--;const n=clone(l);n.qty=1;n.extras=chEx;n.price=base+exPrice(chEx);dr.splice(dr.indexOf(l)+1,0,n);}
+    else{l.extras=chEx;l.price=base+exPrice(chEx);if(!chEx.length)delete l.extras;}
+    saveDrafts();return renderSide();}
+  const it=chItem,dr=it.drinks||[];
+  if(it.options.length&&chO<0)return say("Bitte erst "+it.options.join(" oder ")+" wählen.","err");
+  if(dr.length&&chD<0)return say("Bitte noch das Getränk wählen.","err");
+  $("chooser").hidden=true;addLine(it,chV,it.options[chO]||"");
+  if(dr.length)addLine({nr:"",name:"Kids-Getränk",variants:[{label:"",price:0}]},0,dr[chD],{drink:true,cat:"Softdrinks"});}
+$("chAdd").onclick=finishPick;
+$("chFreePr").onkeydown=e=>{if(e.key==="Enter")finishPick();};$("chCancel").onclick=()=>{$("chooser").hidden=true;};
 $("chooser").onclick=e=>{if(e.target===$("chooser"))$("chooser").hidden=true;};
 
-function addLine(it,vi,opt){if(!cur)return;const v=it.variants[vi],dr=drafts[cur]||(drafts[cur]=[]);
-  const cn=(menu[cat]||{}).name||"",gg=DRINKS.includes(cn)?undefined:gangSel;
-  const same=dr.find(l=>!l.note&&l.gang===gg&&l.name===it.name&&l.nr===it.nr&&l.variant===v.label&&l.option===opt&&l.price===v.price);
-  if(same)same.qty++;else dr.push({cat:(menu[cat]||{}).name||"",nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price:v.price,qty:1,note:"",gang:gg});
+function addLine(it,vi,opt,ov){if(!cur)return;ov=ov||{};const v=it.variants[vi],dr=drafts[cur]||(drafts[cur]=[]);
+  const cn=ov.cat||(menu[cat]||{}).name||"",isDr=ov.drink||DRINKS.includes(cn),gg=isDr?undefined:gangSel,price=ov.price!=null?ov.price:v.price;
+  const same=dr.find(l=>!l.note&&!(l.extras||[]).length&&l.gang===gg&&l.name===it.name&&l.nr===it.nr&&l.variant===(v.label||"")&&l.option===(opt||"")&&l.price===price);
+  if(same)same.qty++;else{const nl={cat:cn,nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price,qty:1,note:"",gang:gg};if(isDr)nl.drink=true;dr.push(nl);}
   saveDrafts();mode="order";say("");renderSide();}
 
 /* ---------- Tisch: Rechnung (gebucht + neu) ---------- */
@@ -440,7 +493,8 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
       const pr=document.createElement("div");pr.className="p";pr.textContent=eur(l.qty*l.price);
       d.append(q,tt,pr);
       const bx=document.createElement("div");bx.className="lnBtns";
-      if(isFood(l)){const gb=document.createElement("button");gb.className="gangBtn"+((l.gang||1)>1?" later":"");gb.textContent=(l.gang||1)+". Gang";gb.onclick=()=>{l.gang=(l.gang||1)%3+1;saveDrafts();renderSide();};bx.append(gb);}
+      if(isFood(l)){const gb=document.createElement("button");gb.className="gangBtn"+((l.gang||1)>1?" later":"");gb.textContent=(l.gang||1)+". Gang";gb.onclick=()=>{l.gang=(l.gang||1)%3+1;saveDrafts();renderSide();};bx.append(gb);
+        if(l.cat!=="Extras"&&l.cat!=="Speisen Divers"){const eb=document.createElement("button");eb.className="noteBtn";eb.textContent=(l.extras||[]).length?"Extras ändern":"+ Extra";eb.onclick=()=>openExtras(l);bx.append(eb);}}
       if(noteOpen===i){const inp=document.createElement("input");inp.value=l.note;inp.placeholder="Notiz, z. B. ohne Koriander";
         inp.onchange=()=>{l.note=inp.value.trim();saveDrafts();};inp.onblur=()=>{l.note=inp.value.trim();noteOpen=-1;saveDrafts();renderSide();};
         inp.onkeydown=e=>{if(e.key==="Enter")inp.blur();};d.append(inp);focusMe=inp;}
@@ -575,7 +629,7 @@ function bonBlocks(o,when){const W=parseInt(cfg.width)||48,IW=W-4,H=Math.floor(I
   if(o.label)add(o.label,{b:1});
   add("");rule("║","─","║");add("");
   o.lines.forEach((l,i)=>{if(i)add("");
-    lr(`${l.qty}x ${lineName(l)}`,eur(l.qty*l.price),IW).forEach(x=>add(x));
+    lr(`${l.qty}x ${printName(l)}`,eur(l.qty*l.price),IW).forEach(x=>add(x));
     if(l.qty>1)add("   à "+eur(l.price));
     if(l.note)wrap(l.note,IW-5).forEach((x,j)=>add((j?"     ":"   > ")+x,{b:1}));});
   add("");rule("║","─","║");add("");
@@ -621,7 +675,7 @@ function kitchenBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W
       al(1);sz(0x11);bold(1);if(wait)inv(1);n(" "+g+". GANG ");if(wait)inv(0);nl();
       sz(0x00);n(wait?"- warten auf Abruf -":"- sofort -");nl();bold(0);al(0);n("-".repeat(W));nl();}
     sz(0x11);bold(1);
-    wrap(`${l.qty}x ${lineName(l)}`,W2-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});
+    wrap(`${l.qty}x ${printName(l)}`,W2-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});
     if(l.note){inv(1);wrap(">> "+l.note,W2-2).forEach(x=>{n(" "+x+" ");nl();});inv(0);}
     bold(0);sz(0);nl();}
   n("=".repeat(W));nl();
@@ -635,7 +689,7 @@ function drinkBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=
   sz(0x00);bold(0);n(stamp(when));nl();
   al(0);n("=".repeat(W));nl();
   for(const l of o.lines){bold(1);
-    wrap(`${l.qty}x ${lineName(l)}`,W-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});bold(0);
+    wrap(`${l.qty}x ${printName(l)}`,W-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});bold(0);
     if(l.note)wrap(">> "+l.note,W-3).forEach(x=>{n("   "+x);nl();});}
   n("=".repeat(W));nl();
   b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,5,GS,0x56,66,0);return b;}
