@@ -109,6 +109,8 @@ summary{cursor:pointer;font-weight:600}
 .banner b{font-size:18px}
 .sync{font-size:12px;color:#cfd8d2;white-space:nowrap;padding:0 6px}
 .sync.err{color:#ffb4a8}
+.vi{color:var(--acc);font-weight:500;font-size:14px;font-style:italic}
+.row .nm .vi{font-size:15px}
 .warn{background:#fdecea;border:1px solid #f1b8b0;border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
 </style>
 </head>
@@ -152,6 +154,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const norm = s => String(s||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[áàâã]/g,'a').replace(/[éèê]/g,'e').replace(/[ìí]/g,'i').replace(/[òóô]/g,'o').replace(/[ùú]/g,'u');
+const normVi = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
 const unitLabel = (u, q) => q === 1 ? u : (PLURAL[u] || u);
 const art = id => data.articles.find(a => a.id === id);
 const cat = id => data.cats.find(c => c.id === id) || data.cats.find(c => c.id === 'sonstiges');
@@ -176,7 +179,8 @@ function defaults(){
         hamberger:{name:'Meine Frau', email:'thaithaole@googlemail.com'}
       },
       times: {remindH:'13:00', sendH:'15:00', remindK:'19:00', sendK:'21:00'},
-      autoSend: true
+      autoSend: true,
+      viMail: true
     },
     sent: {},
     history: [],
@@ -286,6 +290,56 @@ function save(){
   if (connected()){ lsSet(LS_DIRTY, '1'); setSync('ok'); clearTimeout(sync.timer); sync.timer = setTimeout(push, 1500); }
 }
 
+/* ---------- Übersetzung Vietnamesisch ---------- */
+const trCache = {};
+async function translateVi(text){
+  text = String(text||'').trim(); if (!text) return '';
+  const k = norm(text); if (trCache[k]) return trCache[k];
+  let r = '';
+  try {
+    const res = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=vi&dt=t&q=' + encodeURIComponent(text));
+    if (res.ok){ const j = await res.json(); r = (j[0]||[]).map(x => x[0]).join('').trim(); }
+  } catch(e){}
+  if (!r){
+    try {
+      const res = await fetch('https://api.mymemory.translated.net/get?langpair=de|vi&q=' + encodeURIComponent(text));
+      if (res.ok){ const j = await res.json(); r = String((j.responseData && j.responseData.translatedText) || '').trim(); }
+    } catch(e){}
+  }
+  if (r && norm(r) === k) r = '';
+  if (r) trCache[k] = r;
+  return r;
+}
+async function autoVi(force){
+  const me = ed; if (!me) return;
+  if (me.viManual && !force) return;
+  const name = me.name.trim();
+  const st = () => $('#vist');
+  if (!name){ if (!me.viManual){ me.vi = ''; const i = $('#evi'); if (i) i.value = ''; } return; }
+  if (st()) st().textContent = 'übersetze …';
+  const r = await translateVi(name);
+  if (ed !== me || me.name.trim() !== name) return;
+  if (r){ me.vi = r; me.viManual = false; const i = $('#evi'); if (i) i.value = r; if (st()) st().textContent = 'automatisch übersetzt – bei Bedarf korrigieren'; }
+  else if (st()) st().textContent = navigator.onLine === false ? 'offline – wird beim Speichern nachgeholt' : 'keine Übersetzung gefunden – bitte selbst eintragen';
+}
+function softRender(){
+  if (view === 'order' && document.activeElement && document.activeElement.id === 'q') renderMainOnly(); else render();
+}
+async function fillVi(a){
+  if (!a || a.vi) return;
+  const r = await translateVi(a.name);
+  if (r && art(a.id) && !a.vi){ a.vi = r; save(); softRender(); }
+}
+async function fillAllVi(){
+  const todo = data.articles.filter(a => !a.vi);
+  if (!todo.length) return;
+  toast('Übersetze ' + todo.length + ' Artikel …');
+  let ok = 0;
+  for (const a of todo){ const r = await translateVi(a.name); if (r && art(a.id) && !a.vi){ a.vi = r; ok++; } }
+  save(); render();
+  toast(ok ? ok + (ok === 1 ? ' Übersetzung' : ' Übersetzungen') + ' ergänzt' : 'Keine Übersetzung möglich (Internet?)');
+}
+
 /* ---------- category suggestion ---------- */
 function suggestCat(name){
   const n = norm(name).trim();
@@ -322,7 +376,7 @@ function linesFor(entries){
     const g = groups[c.id]; if (!g) continue;
     g.sort((x,y) => x.a.name.localeCompare(y.a.name,'de'));
     out.push(c.name.toUpperCase());
-    for (const {a,q} of g) out.push('  ' + q + ' ' + unitLabel(a.unit,q) + ' ' + a.name + (a.nr ? '  (Nr. ' + a.nr + ')' : ''));
+    for (const {a,q} of g) out.push('  ' + q + ' ' + unitLabel(a.unit,q) + ' ' + a.name + (data.settings.viMail && a.vi ? ' / ' + a.vi : '') + (a.nr ? '  (Nr. ' + a.nr + ')' : ''));
     out.push('');
   }
   return out;
@@ -410,12 +464,12 @@ function tileHTML(a, fav){
   const on = onLists(a.id);
   const pills = Object.entries(on).map(([s,q]) => `<span class="pill ${LISTS[s].cls}">${LISTS[s].name.split(' ')[0]} ${q}</span>`).join('');
   const dot = a.store ? `<span class="dot ${a.store==='hamberger'?'h':'k'}"></span>` : '';
-  return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b><small>${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
+  return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
 }
 function renderOrder(){
-  const q = norm(query).trim();
+  const q = norm(query).trim(), qv = normVi(query).trim();
   let list = data.articles.slice();
-  if (q) list = list.filter(a => norm(a.name).includes(q) || norm(a.nr).includes(q) || norm(cat(a.cat).name).includes(q));
+  if (q) list = list.filter(a => norm(a.name).includes(q) || (a.vi && normVi(a.vi).includes(qv)) || norm(a.nr).includes(q) || norm(cat(a.cat).name).includes(q));
   let h = bannerHTML() + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
     <button class="btn" onclick="openEdit(null, query)">＋ Neuer Artikel</button></div>`;
   if (!data.articles.length){
@@ -450,7 +504,7 @@ function openOrder(aid){
   const onTxt = Object.entries(on).map(([s,q]) => `${q} auf ${LISTS[s].long}`).join(' · ');
   const btn = (s, label) => `<button class="btn ${LISTS[s].cls} ${a.store===s?'def':''}" onclick="addToList('${aid}','${s}',mQty);closeModal();render()">${label}</button>`;
   $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
-    <h3>${esc(a.name)}</h3>
+    <h3>${esc(a.name)}</h3>${a.vi?`<div class="vi" style="font-size:18px">${esc(a.vi)}</div>`:''}
     <div class="sub">${a.nr?'Bestellnr. <b>'+esc(a.nr)+'</b> · ':''}${esc(cat(a.cat).name)} · Maß: <b>${esc(a.unit)}</b>${onTxt?`<br><span style="color:var(--ink)">Schon drauf: ${esc(onTxt)}</span>`:''}</div>
     <div class="step">
       <button onclick="chg(-10)">−10</button><button onclick="chg(-5)">−5</button><button onclick="chg(-1)">−1</button>
@@ -473,11 +527,13 @@ function closeModal(){ $('#modal').innerHTML = ''; }
 let ed = null;
 function openEdit(aid, preset){
   const a = aid ? art(aid) : null;
-  ed = a ? Object.assign({nr:''}, a) : {id:null, name:(preset||'').trim(), nr:'', cat:null, unit:'Stück', store:'', by:''};
+  ed = a ? Object.assign({nr:'', vi:''}, a) : {id:null, name:(preset||'').trim(), nr:'', vi:'', cat:null, unit:'Stück', store:'', by:''};
   ed.catManual = !!a;
+  ed.viManual = !!(a && a.vi);
   if (!ed.cat) ed.cat = suggestCat(ed.name);
   ed.sugg = suggestCat(ed.name);
   drawEdit();
+  if (!ed.vi && ed.name.trim()) autoVi(false);
   setTimeout(() => { const i = $('#en'); if (i && !a){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 30);
 }
 function drawEdit(){
@@ -490,6 +546,9 @@ function drawEdit(){
     <label class="f">Name</label>
     <input id="en" class="in" value="${esc(ed.name)}" placeholder="z. B. Tomaten, Reisnudeln, To-go-Boxen" oninput="edName(this.value)" autocomplete="off">
     <div id="dup" class="hint"></div>
+    <label class="f">Vietnamesisch</label>
+    <div style="display:flex;gap:8px"><input id="evi" class="in" value="${esc(ed.vi||'')}" placeholder="wird automatisch übersetzt …" oninput="ed.vi=this.value;ed.viManual=!!this.value.trim()" autocomplete="off"><button class="btn sec" title="Neu übersetzen" onclick="autoVi(true)">↻</button></div>
+    <div id="vist" class="hint"></div>
     <label class="f">Bestellnummer</label>
     <input id="enr" class="in" value="${esc(ed.nr||'')}" placeholder="Artikel-/Bestellnummer beim Lieferanten" oninput="ed.nr=this.value;checkDup()" autocomplete="off">
     <div id="dupnr" class="hint"></div>
@@ -513,6 +572,7 @@ function edName(v){
   ed.name = v;
   const s = suggestCat(v);
   ed.sugg = s;
+  clearTimeout(edName._t); edName._t = setTimeout(() => autoVi(false), 700);
   if (!ed.catManual && ed.cat !== s){ ed.cat = s; const pos = $('#en').selectionStart; drawEdit(); const i=$('#en'); i.focus(); i.setSelectionRange(pos,pos); }
   else checkDup();
 }
@@ -533,12 +593,12 @@ function saveEdit(){
   if (data.articles.find(a => a.id !== ed.id && norm(a.name) === n)){ toast('Diesen Artikel gibt es schon'); return; }
   if (ed.id){
     const a = art(ed.id);
-    Object.assign(a, {name, nr:String(ed.nr||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim()});
-    save(); closeModal(); render(); toast('Gespeichert');
+    Object.assign(a, {name, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim()});
+    save(); closeModal(); render(); toast('Gespeichert'); fillVi(a);
   } else {
-    const a = {id:uid(), name, nr:String(ed.nr||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
+    const a = {id:uid(), name, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
     data.articles.push(a);
-    save(); query=''; render(); openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen');
+    save(); query=''; render(); openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen'); fillVi(a);
   }
 }
 function delArticle(id){
@@ -571,7 +631,7 @@ function renderList(store){
     g.sort((x,y) => x.a.name.localeCompare(y.a.name,'de'));
     h += `<h2 class="cat">${esc(c.name)}</h2>`;
     for (const {e, a} of g){
-      h += `<div class="row"><div class="nm">${esc(a.name)}<small>${a.nr?'Nr. '+esc(a.nr):'<span style="color:#b3261e">Bestellnr. fehlt</span>'}${a.by?' · eingetragen von '+esc(a.by):''}</small></div>
+      h += `<div class="row"><div class="nm">${esc(a.name)}${a.vi?` <span class="vi">· ${esc(a.vi)}</span>`:''}<small>${a.nr?'Nr. '+esc(a.nr):'<span style="color:#b3261e">Bestellnr. fehlt</span>'}${a.by?' · eingetragen von '+esc(a.by):''}</small></div>
         ${store==='sonstiges' ? `<label class="chk"><input type="checkbox" ${e.send!==false?'checked':''} onchange="setSend('${a.id}',this.checked)"> mitschicken</label>` : ''}
         <div class="mini"><button onclick="qty('${store}','${a.id}',-1)">−</button><span>${e.qty} ${esc(unitLabel(a.unit,e.qty))}</span><button onclick="qty('${store}','${a.id}',1)">+</button></div>
         <button class="x" title="Entfernen" onclick="removeEntry('${store}','${a.id}')">✕</button></div>`;
@@ -645,6 +705,10 @@ function renderSettings(){
     ${time('remindK','Erinnerung Kauflandliste')}${time('sendK','Versand Kauflandliste')}
     </div><label class="chk" style="margin-top:14px;font-size:16px;color:var(--ink)"><input type="checkbox" ${S.autoSend?'checked':''} onchange="data.settings.autoSend=this.checked;save()"> Listen sonntags automatisch per Mail senden</label>
     <div class="hint">Der Versand läuft über GitHub – das iPad muss dafür nicht an sein. Er startet in der ersten halben Stunde nach der eingestellten Zeit. Leere Listen werden nicht verschickt. Die Erinnerung erscheint, wenn die App sonntags ab der Erinnerungszeit geöffnet ist oder geöffnet wird.</div></div>
+    <h2 class="cat">Übersetzung (Vietnamesisch)</h2><div class="card">
+    <label class="chk" style="font-size:16px;color:var(--ink)"><input type="checkbox" ${S.viMail?'checked':''} onchange="data.settings.viMail=this.checked;save()"> Vietnamesische Namen in den Mails mitschicken</label>
+    <div class="hint">Neue Artikel werden beim Eintragen automatisch übersetzt (Google Übersetzer, braucht Internet). Die Übersetzung kann man im Artikel jederzeit korrigieren; die Suche findet Artikel auch auf Vietnamesisch.</div>
+    <div style="margin-top:10px"><button class="btn sec" ${data.articles.some(a => !a.vi)?'':'disabled'} onclick="fillAllVi()">Fehlende Übersetzungen ergänzen (${data.articles.filter(a => !a.vi).length})</button></div></div>
     <h2 class="cat">Kategorien</h2><div class="card"><div class="hint" style="margin:0 0 10px">Stichwörter (durch Komma getrennt) steuern den automatischen Vorschlag.</div>
     ${data.cats.map(c => `<div class="catrow"><input class="in" value="${esc(c.name)}" onchange="renCat('${c.id}',this.value)"><input class="in kw" value="${esc(c.kw)}" placeholder="Stichwörter …" onchange="kwCat('${c.id}',this.value)">${c.id==='sonstiges'?'<span></span>':`<button class="x" onclick="delCat('${c.id}')">✕</button>`}</div>`).join('')}
     <button class="btn sec" style="margin-top:8px" onclick="addCat()">＋ Kategorie</button></div>
