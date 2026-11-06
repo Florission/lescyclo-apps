@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Einkauf">
+<meta name="theme-color" content="#1f2a24">
+<title>Einkauf</title>
+<style>
+:root{
+  --bg:#f4f2ee; --card:#fff; --ink:#1d1d1b; --mut:#6d6a64; --line:#e2ded6;
+  --top:#1f2a24; --acc:#2f6f4f;
+  --ham:#2e7d4f; --ham-l:#e3f1e8;
+  --kau:#c0392b; --kau-l:#f9e3e0;
+  --oth:#5b5f97; --oth-l:#e6e7f4;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:manipulation}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+header{position:sticky;top:0;z-index:20;background:var(--top);color:#fff;display:flex;align-items:center;gap:6px;padding:8px 10px;overflow-x:auto}
+header h1{font-size:19px;margin:0 10px 0 4px;white-space:nowrap}
+.tab{padding:10px 14px;border-radius:10px;color:#cfd8d2;white-space:nowrap;font-weight:600}
+.tab.on{background:#fff;color:var(--top)}
+.tab .n{display:inline-block;min-width:22px;padding:1px 7px;margin-left:6px;border-radius:20px;font-size:13px;background:rgba(255,255,255,.18);text-align:center}
+.tab.on .n{background:var(--top);color:#fff}
+.tab.h .n{background:var(--ham);color:#fff}.tab.k .n{background:var(--kau);color:#fff}.tab.o .n{background:var(--oth);color:#fff}
+.sp{flex:1}
+main{padding:14px 14px 90px;max-width:1300px;margin:0 auto}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:18px}
+.btn{padding:12px 18px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600;font-size:16px}
+.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.h{background:var(--ham)}.btn.k{background:var(--kau)}.btn.o{background:var(--oth)}
+.btn.danger{background:#fff;color:#b3261e;border:1px solid #e9b7b2}
+.btn:disabled{opacity:.45}
+h2.cat{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:22px 4px 8px;display:flex;gap:8px;align-items:center}
+h2.cat .c{font-weight:500;letter-spacing:0;text-transform:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 10px;text-align:left;min-height:84px;display:flex;flex-direction:column;gap:4px;position:relative}
+.tile:active{transform:scale(.98)}
+.tile b{font-size:17px;line-height:1.2}
+.tile small{color:var(--mut)}
+.tile .bd{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
+.pill{font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px}
+.pill.h{background:var(--ham-l);color:var(--ham)}.pill.k{background:var(--kau-l);color:var(--kau)}.pill.o{background:var(--oth-l);color:var(--oth)}
+.tile .dot{position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%}
+.dot.h{background:var(--ham)}.dot.k{background:var(--kau)}
+.fav{background:linear-gradient(#fff,#fbfaf7)}
+.empty{color:var(--mut);padding:30px 10px;text-align:center}
+/* lists */
+.lhead{background:var(--card);border-radius:var(--r);border:1px solid var(--line);padding:16px;margin-bottom:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.lhead .t{flex:1;min-width:220px}
+.lhead .t > b{font-size:20px}
+.lhead .t div{color:var(--mut);font-size:14px;margin-top:2px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.row .nm{flex:1;font-size:17px;font-weight:600}
+.row .nm small{display:block;font-weight:400;color:var(--mut);font-size:13px}
+.mini{display:flex;align-items:center;gap:4px}
+.mini button{width:44px;height:44px;border-radius:10px;background:#f0ede7;font-size:20px;font-weight:700}
+.mini span{min-width:96px;text-align:center;font-weight:700}
+.x{width:44px;height:44px;border-radius:10px;color:#b3261e;font-size:22px}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mut)}
+.chk input{width:24px;height:24px}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(20,20,18,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:700px){.ov{align-items:center}}
+.md{background:#fff;width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:20px;max-height:92vh;overflow:auto}
+@media(min-width:700px){.md{border-radius:20px}}
+.md h3{margin:0;font-size:24px}
+.md .sub{color:var(--mut);margin:2px 0 16px}
+.step{display:grid;grid-template-columns:repeat(3,1fr) 1.4fr repeat(3,1fr);gap:6px;margin:8px 0 18px}
+.step button{height:58px;border-radius:12px;background:#f0ede7;font-size:18px;font-weight:700}
+.step .v{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--ink);border-radius:12px}
+.step .v b{font-size:26px;line-height:1}
+.step .v small{color:var(--mut)}
+.acts{display:grid;gap:8px}
+.acts .btn{padding:16px;font-size:18px;text-align:center}
+.acts .btn.def{box-shadow:0 0 0 3px #1d1d1b22;}
+.lnk{color:var(--acc);font-weight:600;padding:12px 4px}
+label.f{display:block;font-size:13px;color:var(--mut);margin:14px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+input.in,select.in{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600}
+.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button.sg{border:2px dashed var(--acc)}
+.hint{font-size:13px;color:var(--mut);margin-top:6px}
+.foot{display:flex;gap:8px;justify-content:space-between;margin-top:22px;flex-wrap:wrap}
+/* settings */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 4px;font-size:18px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.two{grid-template-columns:1fr}}
+.catrow{display:grid;grid-template-columns:230px 1fr 44px;gap:8px;align-items:center;margin-bottom:6px}
+@media(max-width:600px){.catrow{grid-template-columns:1fr 44px}.catrow .kw{grid-column:1/3}}
+pre.msg{white-space:pre-wrap;background:#f6f4ef;border-radius:10px;padding:12px;font:14px/1.4 ui-monospace,monospace;margin:8px 0}
+details{border-top:1px solid var(--line);padding:8px 0}
+summary{cursor:pointer;font-weight:600}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:12px 20px;border-radius:12px;z-index:90;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+</style>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<style>
+.banner{background:#fff6dc;border:1px solid #ecd48a;border-radius:var(--r);padding:14px 16px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner .t{flex:1;min-width:220px}
+.banner b{font-size:18px}
+.sync{font-size:12px;color:#cfd8d2;white-space:nowrap;padding:0 6px}
+.sync.err{color:#ffb4a8}
+.vi{color:var(--acc);font-weight:500;font-size:14px;font-style:italic}
+.row .nm .vi{font-size:15px}
+.fold{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fold button{padding:12px 18px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:17px}
+.fold button.on{background:var(--top);color:#fff;border-color:var(--top)}
+.fold button.no{border-color:#e9b7b2;color:#b3261e}
+.fold small{font-weight:400;opacity:.75}
+.fold .n{display:inline-block;min-width:22px;padding:1px 7px;margin-left:8px;border-radius:20px;font-size:13px;background:#f0ede7;color:var(--ink);text-align:center}
+.fold button.on .n{background:rgba(255,255,255,.2);color:#fff}
+h2.area{font-size:22px;margin:28px 4px 2px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.seg.big button{padding:14px 20px;font-size:18px}
+.warn{background:#fdecea;border:1px solid #f1b8b0;border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+<main id="main"></main>
+<div id="modal"></div>
+<div id="toast"></div>
+<script>
+'use strict';
+const LS_DATA = 'lescyclo_einkauf_data';
+const LS_CFG = 'lescyclo_einkauf_sync';
+const LS_DIRTY = 'lescyclo_einkauf_dirty';
+const LS_SEEN = 'lescyclo_einkauf_reminded';
+const UNITS = ['Stück','Packung','Stiege','Kiste'];
+const PLURAL = {'Stück':'Stück','Packung':'Packungen','Stiege':'Stiegen','Kiste':'Kisten'};
+const LISTS = {
+  hamberger:{name:'Hamberger', long:'Hambergerliste', cls:'h'},
+  kaufland:{name:'Kaufland', long:'Kauflandliste', cls:'k'},
+  sonstiges:{name:'Andere Läden', long:'Andere Läden', cls:'o'}
+};
+const AREAS = [
+  {id:'kueche', name:'Küche', icon:'🍳'},
+  {id:'service', name:'Service', icon:'🍽️'}
+];
+const AREA_KEYS = AREAS.map(x => x.id).concat(['']);
+const LS_AREA = 'lescyclo_einkauf_area';
+const DEFAULT_CATS = [
+  {id:'gemuese', name:'Obst & Gemüse', kw:'tomate,gurke,salat,zwiebel,knoblauch,ingwer,zitrone,limette,koriander,minze,basilikum,petersilie,paprika,chili,karotte,möhre,kohl,sprossen,mungo,lauch,avocado,mango,banane,apfel,ananas,kartoffel,pilz,champignon,aubergine,zucchini,rettich,rucola,zitronengras,lemongras,beere,erdbeer,orange,gemüse,obst,kräuter,brokkoli,spinat,edamame,shiitake,pak choi,gurken,radieschen,kürbis,mais,dill,schnittlauch,thai'},
+  {id:'fleisch', name:'Fleisch & Fisch', kw:'rind,hähnchen,huhn,chicken,schwein,ente,garnele,shrimp,lachs,fisch,hack,filet,wurst,speck,bauch,brust,keule,schenkel,pute,tintenfisch,calamari,thunfisch,meeresfrüchte,steak'},
+  {id:'kuehl', name:'Kühlware & Molkerei', kw:'milch,sahne,butter,käse,joghurt,ei,eier,quark,tofu,mozzarella,schmand,feta,frischkäse,margarine'},
+  {id:'trocken', name:'Trockenware & Saucen', kw:'reis,nudel,reisnudel,glasnudel,mehl,zucker,salz,pfeffer,gewürz,öl,essig,sojasauce,sojasoße,soja,fischsauce,fischsoße,hoisin,sriracha,sauce,soße,erdnuss,sesam,kokosmilch,konserve,dose,reispapier,stärke,brühe,bohnen,linsen,kondensmilch,honig,nüsse,cashew,curry,paste,ketchup,mayo,mayonnaise,senf,sambal,austernsauce,glutamat,brühpulver,panko,chips'},
+  {id:'getraenke', name:'Getränke', kw:'wasser,cola,fanta,sprite,saft,bier,wein,limo,limonade,schorle,mate,tee,sirup,eistee,kaffee,espresso,bohnenkaffee,sekt,prosecco,tonic,ginger,kombucha,smoothie,sprudel,mineralwasser'},
+  {id:'lehmann', name:'Lehmann (Getränke)', kw:'lehmann'},
+  {id:'tk', name:'Tiefkühl', kw:'tk,tiefkühl,gefroren,eis,eiswürfel,pommes,frühlingsrolle,frühlingsrollen,gyoza,dumpling'},
+  {id:'back', name:'Brot & Backwaren', kw:'brot,baguette,brötchen,banh mi,bánh mì,toast,wrap,tortilla'},
+  {id:'verpackung', name:'Verpackung & Einweg', kw:'box,boxen,schale,becher,deckel,tüte,tüten,beutel,serviette,servietten,strohhalm,besteck,stäbchen,alufolie,frischhaltefolie,folie,backpapier,bonrolle,kassenrolle,menübox,to-go,togo,karton,gabel,löffel,dressingbecher,etikett,klebeband'},
+  {id:'reinigung', name:'Reinigung & Hygiene', kw:'spülmittel,reiniger,schwamm,schwämme,lappen,müllbeutel,müllsack,handschuh,handschuhe,seife,desinfektion,klopapier,toilettenpapier,papiertücher,küchenrolle,spülmaschine,tabs,glasreiniger,besen,entkalker,klarspüler,putz,wischmop,handtuch,papierhandtücher'},
+  {id:'sonstiges', name:'Sonstiges', kw:''}
+];
+
+let data = null;
+let view = 'order';
+let query = '';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const norm = s => String(s||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[áàâã]/g,'a').replace(/[éèê]/g,'e').replace(/[ìí]/g,'i').replace(/[òóô]/g,'o').replace(/[ùú]/g,'u');
+const normVi = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
+const unitLabel = (u, q) => q === 1 ? u : (PLURAL[u] || u);
+const art = id => data.articles.find(a => a.id === id);
+const cat = id => data.cats.find(c => c.id === id) || data.cats.find(c => c.id === 'sonstiges');
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
+const aId = a => AREAS.some(x => x.id === a.area) ? a.area : '';
+function areaName(id, icon){ const x = AREAS.find(a => a.id === id); if (!x) return (icon===false?'':'⚠︎ ') + 'Ohne Ordner'; return (icon===false?'':x.icon+' ') + x.name + (x.sub ? ' (' + x.sub + ')' : ''); }
+let areaF = lsGet(LS_AREA) ?? 'all';
+function setArea(id){ areaF = id; lsSet(LS_AREA, id); query = ''; render(); }
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2800); }
+function berlinNow(){
+  const p = new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+  const g = t => (p.find(x => x.type === t) || {}).value;
+  return {sunday: /^So/.test(g('weekday')), date: g('year')+'-'+g('month')+'-'+g('day'), time: g('hour')+':'+g('minute')};
+}
+
+function defaults(){
+  return {
+    v:2, rev:0,
+    cats: JSON.parse(JSON.stringify(DEFAULT_CATS)),
+    articles: [],
+    lists: {hamberger:[], kaufland:[], sonstiges:[]},
+    settings: {
+      recipients: {
+        kaufland: {name:'Floris', email:'floris_van_bommel@yahoo.de'},
+        hamberger:{name:'Meine Frau', email:'thaithaole@googlemail.com'}
+      },
+      times: {remindH:'13:00', sendH:'15:00', remindK:'19:00', sendK:'21:00'},
+      autoSend: true,
+      viMail: true
+    },
+    sent: {},
+    history: [],
+    outbox: {hamberger:'', kaufland:''}
+  };
+}
+function fixup(d){
+  const def = defaults();
+  d = Object.assign(def, d || {});
+  d.lists = Object.assign({hamberger:[], kaufland:[], sonstiges:[]}, d.lists || {});
+  d.settings = Object.assign(defaults().settings, d.settings || {});
+  d.settings.recipients = Object.assign(defaults().settings.recipients, d.settings.recipients || {});
+  for (const k of ['kaufland','hamberger']) d.settings.recipients[k] = Object.assign(defaults().settings.recipients[k], d.settings.recipients[k]);
+  d.settings.times = Object.assign(defaults().settings.times, d.settings.times || {});
+  if (!Array.isArray(d.cats) || !d.cats.length) d.cats = JSON.parse(JSON.stringify(DEFAULT_CATS));
+  if (!d.cats.find(c => c.id === 'lehmann')){ const i = d.cats.findIndex(c => c.id === 'getraenke'); d.cats.splice(i >= 0 ? i + 1 : Math.max(0, d.cats.length - 1), 0, {id:'lehmann', name:'Lehmann (Getränke)', kw:'lehmann'}); }
+  (d.articles || []).forEach(a => { if (a.area === 'lehmann'){ a.cat = 'lehmann'; delete a.area; } });
+  if (!d.cats.find(c => c.id === 'sonstiges')) d.cats.push({id:'sonstiges', name:'Sonstiges', kw:''});
+  d.history = d.history || []; d.sent = d.sent || {};
+  return d;
+}
+
+/* ---------- GitHub-Sync ---------- */
+const sync = {sha:null, state:'off', msg:'', timer:null, busy:false};
+function cfg(){ try { return JSON.parse(lsGet(LS_CFG) || 'null') || {}; } catch(e){ return {}; } }
+function connected(){ const c = cfg(); return !!(c.token && c.repo); }
+const b64e = s => btoa(unescape(encodeURIComponent(s)));
+const b64d = s => decodeURIComponent(escape(atob(String(s).replace(/\s/g,''))));
+async function gh(path, opt){
+  const c = cfg();
+  opt = opt || {};
+  return fetch('https://api.github.com/repos/' + c.repo + path, Object.assign({cache:'no-store'}, opt, {
+    headers: Object.assign({'Authorization':'Bearer ' + c.token, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'}, opt.headers || {})
+  }));
+}
+async function pull(){
+  const r = await gh('/contents/data.json?ref=main');
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('GitHub ' + r.status);
+  const j = await r.json();
+  return {sha: j.sha, d: JSON.parse(b64d(j.content))};
+}
+function setSync(state, msg){ sync.state = state; sync.msg = msg || ''; const el = $('#syncst'); if (el){ el.textContent = syncLabel(); el.className = 'sync' + (state==='err'?' err':''); } }
+function syncLabel(){
+  if (sync.state === 'off') return 'nicht verbunden';
+  if (sync.state === 'busy') return 'speichert …';
+  if (sync.state === 'err') return '⚠︎ ' + (sync.msg || 'Sync-Fehler');
+  if (lsGet(LS_DIRTY) === '1') return 'nicht gespeichert';
+  return '✓ gespeichert';
+}
+function merge(local, remote){
+  // Artikel beider Seiten behalten, lokale Einstellungen gewinnen.
+  // Hat GitHub inzwischen versendet (höhere rev), gelten die Listen von dort.
+  const m = remote;
+  const ids = new Set(local.articles.map(a => a.id));
+  m.articles = local.articles.concat(remote.articles.filter(a => !ids.has(a.id)));
+  m.cats = local.cats; m.settings = local.settings;
+  if ((remote.rev||0) <= (local.rev||0)) m.lists = local.lists;
+  return fixup(m);
+}
+async function push(){
+  if (!connected() || sync.busy) return;
+  if (lsGet(LS_DIRTY) !== '1') return;
+  sync.busy = true; setSync('busy');
+  try {
+    for (let i = 0; i < 3; i++){
+      if (sync.sha === null){ const p = await pull(); sync.sha = p ? p.sha : undefined; if (p && (p.d.rev||0) > (data.rev||0)){ data = merge(data, p.d); writeLocal(); render(); } }
+      const body = {message:'Einkauf: Änderung', content:b64e(JSON.stringify(data, null, 1)), branch:'main'};
+      if (sync.sha) body.sha = sync.sha;
+      const r = await gh('/contents/data.json', {method:'PUT', body:JSON.stringify(body), headers:{'Content-Type':'application/json'}});
+      if (r.ok){ const j = await r.json(); sync.sha = j.content.sha; lsSet(LS_DIRTY, '0'); setSync('ok'); return; }
+      if (r.status === 409 || r.status === 422){
+        const p = await pull();
+        if (p){ sync.sha = p.sha; data = merge(data, p.d); writeLocal(); render(); }
+        continue;
+      }
+      if (r.status === 401 || r.status === 403) throw new Error('Zugriff verweigert – Token prüfen');
+      throw new Error('GitHub ' + r.status);
+    }
+    throw new Error('Konflikt – bitte später erneut');
+  } catch(e){
+    setSync('err', e.message === 'Failed to fetch' ? 'offline – wird nachgeholt' : e.message);
+  } finally { sync.busy = false; }
+}
+async function refresh(force){
+  if (!connected() || sync.busy) return;
+  if (lsGet(LS_DIRTY) === '1'){ push(); return; }
+  try {
+    const p = await pull();
+    if (!p){ lsSet(LS_DIRTY,'1'); sync.sha = undefined; await push(); return; }
+    if (p.sha !== sync.sha || force){
+      sync.sha = p.sha; data = fixup(p.d); writeLocal();
+      if (!$('#modal').innerHTML) render();
+    }
+    setSync('ok');
+  } catch(e){ setSync('err', e.message === 'Failed to fetch' ? 'offline' : e.message); }
+}
+
+/* ---------- storage ---------- */
+function writeLocal(){ lsSet(LS_DATA, JSON.stringify(data)); }
+function load(){
+  let d = null;
+  try { d = JSON.parse(lsGet(LS_DATA) || 'null'); } catch(e){}
+  data = fixup(d);
+}
+function save(){
+  data.outbox = { hamberger: buildText('hamberger'), kaufland: buildText('kaufland') };
+  writeLocal();
+  if (connected()){ lsSet(LS_DIRTY, '1'); setSync('ok'); clearTimeout(sync.timer); sync.timer = setTimeout(push, 1500); }
+}
+
+/* ---------- Übersetzung Vietnamesisch ---------- */
+const trCache = {};
+async function translateVi(text){
+  text = String(text||'').trim(); if (!text) return '';
+  const k = norm(text); if (trCache[k]) return trCache[k];
+  let r = '';
+  try {
+    const res = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=vi&dt=t&q=' + encodeURIComponent(text));
+    if (res.ok){ const j = await res.json(); r = (j[0]||[]).map(x => x[0]).join('').trim(); }
+  } catch(e){}
+  if (!r){
+    try {
+      const res = await fetch('https://api.mymemory.translated.net/get?langpair=de|vi&q=' + encodeURIComponent(text));
+      if (res.ok){ const j = await res.json(); r = String((j.responseData && j.responseData.translatedText) || '').trim(); }
+    } catch(e){}
+  }
+  if (r && norm(r) === k) r = '';
+  if (r) trCache[k] = r;
+  return r;
+}
+async function autoVi(force){
+  const me = ed; if (!me) return;
+  if (me.viManual && !force) return;
+  const name = me.name.trim();
+  const st = () => $('#vist');
+  if (!name){ if (!me.viManual){ me.vi = ''; const i = $('#evi'); if (i) i.value = ''; } return; }
+  if (st()) st().textContent = 'übersetze …';
+  const r = await translateVi(name);
+  if (ed !== me || me.name.trim() !== name) return;
+  if (r){ me.vi = r; me.viManual = false; const i = $('#evi'); if (i) i.value = r; if (st()) st().textContent = 'automatisch übersetzt – bei Bedarf korrigieren'; }
+  else if (st()) st().textContent = navigator.onLine === false ? 'offline – wird beim Speichern nachgeholt' : 'keine Übersetzung gefunden – bitte selbst eintragen';
+}
+function softRender(){
+  if (view === 'order' && document.activeElement && document.activeElement.id === 'q') renderMainOnly(); else render();
+}
+async function fillVi(a){
+  if (!a || a.vi) return;
+  const r = await translateVi(a.name);
+  if (r && art(a.id) && !a.vi){ a.vi = r; save(); softRender(); }
+}
+async function fillAllVi(){
+  const todo = data.articles.filter(a => !a.vi);
+  if (!todo.length) return;
+  toast('Übersetze ' + todo.length + ' Artikel …');
+  let ok = 0;
+  for (const a of todo){ const r = await translateVi(a.name); if (r && art(a.id) && !a.vi){ a.vi = r; ok++; } }
+  save(); render();
+  toast(ok ? ok + (ok === 1 ? ' Übersetzung' : ' Übersetzungen') + ' ergänzt' : 'Keine Übersetzung möglich (Internet?)');
+}
+
+/* ---------- category suggestion ---------- */
+function suggestCat(name){
+  const n = norm(name).trim();
+  if (!n) return 'sonstiges';
+  const same = data.articles.find(a => norm(a.name) === n);
+  if (same) return same.cat;
+  const words = n.split(/[^a-z0-9]+/).filter(Boolean);
+  let best = null, bl = 0;
+  for (const c of data.cats){
+    for (const k0 of String(c.kw||'').split(',')){
+      const k = norm(k0.trim());
+      if (!k) continue;
+      const hit = k.length >= 4 ? n.includes(k) : words.includes(k);
+      if (hit && k.length > bl){ best = c.id; bl = k.length; }
+    }
+  }
+  if (best) return best;
+  for (const a of data.articles){
+    const aw = norm(a.name).split(/[^a-z0-9]+/).filter(w => w.length >= 4);
+    if (aw.some(w => words.includes(w)) && a.cat !== 'sonstiges') return a.cat;
+  }
+  return 'sonstiges';
+}
+
+/* ---------- Mailtext ---------- */
+function linesFor(entries){
+  const rows = entries.map(e => ({a:art(e.aid), q:e.qty})).filter(x => x.a);
+  const out = [];
+  for (const ar of AREA_KEYS){
+    const rs = rows.filter(x => aId(x.a) === ar); if (!rs.length) continue;
+    out.push('--- ' + areaName(ar, false).toUpperCase() + ' ---', '');
+    out.push(...catLines(rs));
+  }
+  return out;
+}
+function catLines(rows){
+  const groups = {};
+  for (const x of rows) (groups[x.a.cat] = groups[x.a.cat] || []).push(x);
+  const out = [];
+  for (const c of data.cats){
+    const g = groups[c.id]; if (!g) continue;
+    g.sort((x,y) => x.a.name.localeCompare(y.a.name,'de'));
+    out.push(c.name.toUpperCase());
+    for (const {a,q} of g) out.push('  ' + q + ' ' + unitLabel(a.unit,q) + ' ' + a.name + (data.settings.viMail && a.vi ? ' / ' + a.vi : '') + (a.nr ? '  (Nr. ' + a.nr + ')' : ''));
+    out.push('');
+  }
+  return out;
+}
+function buildText(store){
+  const L = data.lists;
+  if (store === 'hamberger'){
+    if (!L.hamberger.length) return '';
+    return ["Hamberger-Bestellung Le's Cyclo – {DATUM}", ''].concat(linesFor(L.hamberger)).join('\n').trim();
+  }
+  const extra = L.sonstiges.filter(e => e.send !== false);
+  if (!L.kaufland.length && !extra.length) return '';
+  let t = ["Kauflandliste Le's Cyclo – {DATUM}", ''];
+  t = t.concat(L.kaufland.length ? linesFor(L.kaufland) : ['(Kaufland diese Woche nichts)', '']);
+  if (extra.length){
+    t.push('====================', 'ANDERE LÄDEN (nicht Kaufland/Hamberger)', '====================', '');
+    t = t.concat(linesFor(extra));
+  }
+  return t.join('\n').trim();
+}
+function dateLabel(d){
+  d = d || new Date();
+  const wd = ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()];
+  return wd + ', ' + String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+}
+function finalText(store){ return (buildText(store)).replace('{DATUM}', dateLabel()); }
+
+/* ---------- order logic ---------- */
+function addToList(aid, store, qty){
+  const a = art(aid); if (!a) return;
+  const L = data.lists[store];
+  const e = L.find(x => x.aid === aid);
+  if (e) e.qty += qty; else L.push(store === 'sonstiges' ? {aid, qty, send:true} : {aid, qty});
+  a.count = (a.count||0) + 1;
+  a.lastQty = qty;
+  a.lastUsed = Date.now();
+  save();
+  toast(qty + ' ' + unitLabel(a.unit, qty) + ' ' + a.name + ' → ' + LISTS[store].long);
+}
+function onLists(aid){
+  const r = {};
+  for (const s of Object.keys(LISTS)){ const e = data.lists[s].find(x => x.aid === aid); if (e) r[s] = e.qty; }
+  return r;
+}
+
+/* ---------- Sonntags-Erinnerung (in der App) ---------- */
+function dueReminders(){
+  const n = berlinNow(), t = data.settings.times, out = [];
+  if (!n.sunday) return out;
+  const R = data.settings.recipients;
+  if (n.time >= t.remindH && data.sent.hamberger !== n.date) out.push({store:'hamberger', send:t.sendH, to:R.hamberger.name, past:n.time >= t.sendH});
+  if (n.time >= t.remindK && data.sent.kaufland !== n.date) out.push({store:'kaufland', send:t.sendK, to:R.kaufland.name, past:n.time >= t.sendK});
+  return out.filter(x => !x.past);
+}
+function bannerHTML(){
+  if (!connected()) return `<div class="warn"><b>Noch nicht mit GitHub verbunden.</b> Listen werden nur auf diesem Gerät gespeichert und nicht automatisch verschickt. <button class="lnk" onclick="go('settings')">Jetzt einrichten →</button></div>`;
+  return dueReminders().map(r => `<div class="banner"><div class="t"><b>🔔 ${LISTS[r.store].long} prüfen!</b><br>${data.lists[r.store].length} Artikel · wird heute um ${r.send} Uhr per Mail an ${esc(r.to)} geschickt.</div><button class="btn ${LISTS[r.store].cls}" onclick="go('${r.store}')">Liste ansehen</button></div>`).join('');
+}
+function checkReminderPopup(){
+  const due = dueReminders(); if (!due.length || $('#modal').innerHTML) return;
+  const n = berlinNow(); const r = due[due.length - 1];
+  const key = n.date + ':' + r.store;
+  if (lsGet(LS_SEEN) === key) return;
+  lsSet(LS_SEEN, key);
+  $('#modal').innerHTML = `<div class="ov"><div class="md"><h3>🔔 ${LISTS[r.store].long} prüfen</h3>
+    <div class="sub" style="font-size:18px;color:var(--ink)">Heute um <b>${r.send} Uhr</b> geht die ${LISTS[r.store].long} per Mail an ${esc(r.to)}.<br>Bitte jetzt durchgehen und fehlende Artikel eintragen.</div>
+    <div class="foot"><button class="btn sec" onclick="closeModal()">Später</button><button class="btn ${LISTS[r.store].cls}" onclick="closeModal();go('${r.store}')">Liste öffnen</button></div></div></div>`;
+}
+
+/* ---------- header ---------- */
+function renderHeader(){
+  const n = s => data.lists[s].length;
+  const tab = (id, label, cls, cnt) => `<button class="tab ${cls||''} ${view===id?'on':''}" onclick="go('${id}')">${label}${cnt!=null?`<span class="n">${cnt}</span>`:''}</button>`;
+  $('#hdr').innerHTML = `<h1>🛒 Einkauf</h1>`
+    + tab('order','Bestellen')
+    + tab('hamberger','Hamberger','h',n('hamberger'))
+    + tab('kaufland','Kaufland','k',n('kaufland'))
+    + tab('sonstiges','Andere Läden','o',n('sonstiges'))
+    + `<span class="sp"></span><span id="syncst" class="sync ${sync.state==='err'?'err':''}">${esc(syncLabel())}</span>` + tab('settings','⚙︎');
+}
+function go(v){ view = v; render(); window.scrollTo(0,0); }
+
+/* ---------- order view ---------- */
+function tileHTML(a, fav){
+  const on = onLists(a.id);
+  const pills = Object.entries(on).map(([s,q]) => `<span class="pill ${LISTS[s].cls}">${LISTS[s].name.split(' ')[0]} ${q}</span>`).join('');
+  const dot = a.store ? `<span class="dot ${a.store==='hamberger'?'h':'k'}"></span>` : '';
+  return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${fav && areaF==='all' ? esc((AREAS.find(x => x.id === aId(a))||{icon:'⚠︎'}).icon)+' ' : ''}${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
+}
+function renderOrder(){
+  const q = norm(query).trim(), qv = normVi(query).trim();
+  if (areaF !== 'all' && !data.articles.some(a => aId(a) === areaF) && !AREAS.some(x => x.id === areaF)) areaF = 'all';
+  const inF = a => areaF === 'all' || q || aId(a) === areaF;
+  const cnt = id => data.articles.filter(a => aId(a) === id).length;
+  const fb = (id, label, n, cls) => `<button class="${areaF===id?'on':''} ${cls||''}" onclick="setArea('${id}')">${label}<span class="n">${n}</span></button>`;
+  const noArea = cnt('');
+  const fold = `<div class="fold">${fb('all','Alle',data.articles.length)}${AREAS.map(x => fb(x.id, x.icon+' '+x.name+(x.sub?' <small>'+x.sub+'</small>':''), cnt(x.id))).join('')}${noArea?fb('','⚠︎ Ohne Ordner',noArea,'no'):''}</div>`;
+  let list = data.articles.filter(inF);
+  if (q) list = list.filter(a => norm(a.name).includes(q) || (a.vi && normVi(a.vi).includes(qv)) || norm(a.nr).includes(q) || norm(cat(a.cat).name).includes(q));
+  let h = bannerHTML() + fold + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
+    <button class="btn" onclick="openEdit(null, query)">＋ Neuer Artikel</button></div>`;
+  if (!data.articles.length){
+    return h + `<div class="empty"><p style="font-size:20px">Noch keine Artikel angelegt.</p><p>Tippe auf <b>＋ Neuer Artikel</b> – die Kategorie wird automatisch vorgeschlagen.</p></div>`;
+  }
+  if (!q){
+    const favs = list.filter(a => a.count > 0).sort((x,y) => (y.count - x.count) || ((y.lastUsed||0)-(x.lastUsed||0))).slice(0, 12);
+    if (favs.length) h += `<h2 class="cat">★ Häufig bestellt</h2><div class="grid">${favs.map(a => tileHTML(a,true)).join('')}</div>`;
+  }
+  let any = false;
+  const shown = (areaF === 'all' || q) ? AREA_KEYS : [areaF];
+  for (const ar of shown){
+    const inA = list.filter(a => aId(a) === ar); if (!inA.length) continue;
+    if (shown.length > 1) h += `<h2 class="area">${esc(areaName(ar))}</h2>`;
+    for (const c of data.cats){
+      const items = inA.filter(a => (cat(a.cat).id) === c.id).sort((x,y) => ((y.count||0)-(x.count||0)) || x.name.localeCompare(y.name,'de'));
+      if (!items.length) continue;
+      any = true;
+      h += `<h2 class="cat">${esc(c.name)} <span class="c">(${items.length})</span></h2><div class="grid">${items.map(a => tileHTML(a)).join('')}</div>`;
+    }
+  }
+  if (!any && !q) h += `<div class="empty">Im Ordner ${esc(areaName(areaF))} gibt es noch keine Artikel.<br><br><button class="btn" onclick="openEdit(null, '')">＋ Neuer Artikel</button></div>`;
+  else if (!any) h += `<div class="empty">Nichts gefunden für „${esc(query)}“.<br><br><button class="btn" onclick="openEdit(null, query)">„${esc(query)}“ als neuen Artikel anlegen</button></div>`;
+  return h;
+}
+function renderMainOnly(){
+  const pos = $('#q') ? $('#q').selectionStart : null;
+  $('#main').innerHTML = renderOrder();
+  const el = $('#q'); if (el){ el.focus(); if (pos!=null) el.setSelectionRange(pos,pos); }
+}
+
+/* ---------- order modal ---------- */
+let mQty = 1;
+function openOrder(aid){
+  const a = art(aid); if (!a) return;
+  mQty = a.lastQty || 1;
+  const on = onLists(aid);
+  const onTxt = Object.entries(on).map(([s,q]) => `${q} auf ${LISTS[s].long}`).join(' · ');
+  const btn = (s, label) => `<button class="btn ${LISTS[s].cls} ${a.store===s?'def':''}" onclick="addToList('${aid}','${s}',mQty);closeModal();render()">${label}</button>`;
+  $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
+    <h3>${esc(a.name)}</h3>${a.vi?`<div class="vi" style="font-size:18px">${esc(a.vi)}</div>`:''}
+    <div class="sub">${a.nr?'Bestellnr. <b>'+esc(a.nr)+'</b> · ':''}${esc(areaName(aId(a)))} · ${esc(cat(a.cat).name)} · Maß: <b>${esc(a.unit)}</b>${onTxt?`<br><span style="color:var(--ink)">Schon drauf: ${esc(onTxt)}</span>`:''}</div>
+    <div class="step">
+      <button onclick="chg(-10)">−10</button><button onclick="chg(-5)">−5</button><button onclick="chg(-1)">−1</button>
+      <div class="v"><b id="mq">${mQty}</b><small id="mu">${esc(unitLabel(a.unit,mQty))}</small></div>
+      <button onclick="chg(1)">+1</button><button onclick="chg(5)">+5</button><button onclick="chg(10)">+10</button>
+    </div>
+    <div class="acts">
+      ${btn('hamberger','Zu Hambergerliste hinzufügen')}
+      ${btn('kaufland','Zu Kauflandliste hinzufügen')}
+      ${btn('sonstiges','Anderer Laden (ohne Zuordnung)')}
+    </div>
+    <div class="foot"><button class="lnk" onclick="openEdit('${aid}')">✎ Artikel bearbeiten</button><button class="btn sec" onclick="closeModal()">Abbrechen</button></div>
+  </div></div>`;
+  window._mUnit = a.unit;
+}
+function chg(d){ mQty = Math.max(1, mQty + d); $('#mq').textContent = mQty; $('#mu').textContent = unitLabel(window._mUnit, mQty); }
+function closeModal(){ $('#modal').innerHTML = ''; }
+
+/* ---------- article editor ---------- */
+let ed = null;
+function openEdit(aid, preset){
+  const a = aid ? art(aid) : null;
+  ed = a ? Object.assign({nr:'', vi:''}, a) : {id:null, name:(preset||'').trim(), nr:'', vi:'', cat:null, unit:'Stück', store:'', by:'', area:(AREAS.some(x => x.id === areaF) ? areaF : '')};
+  if (a) ed.area = aId(a);
+  ed.catManual = !!a;
+  ed.viManual = !!(a && a.vi);
+  if (!ed.cat) ed.cat = suggestCat(ed.name);
+  ed.sugg = suggestCat(ed.name);
+  drawEdit();
+  if (!ed.vi && ed.name.trim()) autoVi(false);
+  setTimeout(() => { const i = $('#en'); if (i && !a){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 30);
+}
+function drawEdit(){
+  const isNew = !ed.id;
+  const cats = data.cats.map(c => `<button class="${ed.cat===c.id?'on':''} ${ed.sugg===c.id && ed.cat!==c.id?'sg':''}" onclick="ed.cat='${c.id}';ed.catManual=true;drawEdit()">${esc(c.name)}</button>`).join('');
+  const areas = AREAS.map(x => `<button class="${ed.area===x.id?'on':''} " onclick="ed.area='${x.id}';drawEdit()">${x.icon} ${x.name}${x.sub?' <small>('+x.sub+')</small>':''}</button>`).join('');
+  const units = UNITS.map(u => `<button class="${ed.unit===u?'on':''}" onclick="ed.unit='${u}';drawEdit()">${u}</button>`).join('');
+  const stores = [['hamberger','Hamberger'],['kaufland','Kaufland'],['','Keiner / anderer Laden']].map(([v,l]) => `<button class="${ed.store===v?'on':''}" onclick="ed.store='${v}';drawEdit()">${l}</button>`).join('');
+  $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
+    <h3>${isNew ? 'Neuer Artikel' : 'Artikel bearbeiten'}</h3>
+    <label class="f">Name</label>
+    <input id="en" class="in" value="${esc(ed.name)}" placeholder="z. B. Tomaten, Reisnudeln, To-go-Boxen" oninput="edName(this.value)" autocomplete="off">
+    <div id="dup" class="hint"></div>
+    <label class="f">Ordner</label>
+    <div class="seg big">${areas}</div>
+    ${ed.area ? '' : '<div class="hint" style="color:#b3261e">Bitte auswählen: Küche oder Service.</div>'}
+    <label class="f">Vietnamesisch</label>
+    <div style="display:flex;gap:8px"><input id="evi" class="in" value="${esc(ed.vi||'')}" placeholder="wird automatisch übersetzt …" oninput="ed.vi=this.value;ed.viManual=!!this.value.trim()" autocomplete="off"><button class="btn sec" title="Neu übersetzen" onclick="autoVi(true)">↻</button></div>
+    <div id="vist" class="hint"></div>
+    <label class="f">Bestellnummer</label>
+    <input id="enr" class="in" value="${esc(ed.nr||'')}" placeholder="Artikel-/Bestellnummer beim Lieferanten" oninput="ed.nr=this.value;checkDup()" autocomplete="off">
+    <div id="dupnr" class="hint"></div>
+    <label class="f">Kategorie ${ed.catManual?'':'<span style="text-transform:none;font-weight:400">– automatisch vorgeschlagen</span>'}</label>
+    <div class="seg">${cats}</div>
+    <label class="f">Maß</label>
+    <div class="seg">${units}</div>
+    <label class="f">Wird normalerweise gekauft bei</label>
+    <div class="seg">${stores}</div>
+    <div class="hint">Nur eine Markierung als Standard – beim Bestellen kann man trotzdem jede Liste wählen.</div>
+    <label class="f">Eingetragen von (optional)</label>
+    <input class="in" value="${esc(ed.by||'')}" placeholder="Name" oninput="ed.by=this.value">
+    <div class="foot">
+      ${isNew ? '<span></span>' : `<button class="btn danger" onclick="delArticle('${ed.id}')">Löschen</button>`}
+      <div style="display:flex;gap:8px"><button class="btn sec" onclick="closeModal()">Abbrechen</button><button class="btn" onclick="saveEdit()">Speichern</button></div>
+    </div>
+  </div></div>`;
+  checkDup();
+}
+function edName(v){
+  ed.name = v;
+  const s = suggestCat(v);
+  ed.sugg = s;
+  clearTimeout(edName._t); edName._t = setTimeout(() => autoVi(false), 700);
+  if (!ed.catManual && ed.cat !== s){ ed.cat = s; const pos = $('#en').selectionStart; drawEdit(); const i=$('#en'); i.focus(); i.setSelectionRange(pos,pos); }
+  else checkDup();
+}
+function checkDup(){
+  const d = $('#dup'); if (!d) return;
+  const n = norm(ed.name).trim();
+  const ex = n && data.articles.find(a => a.id !== ed.id && norm(a.name) === n);
+  d.innerHTML = ex ? `⚠︎ „${esc(ex.name)}“ gibt es schon (${esc(cat(ex.cat).name)}).` : '';
+  const dn = $('#dupnr'); if (!dn) return;
+  const nr = String(ed.nr||'').trim();
+  const exn = nr && data.articles.find(a => a.id !== ed.id && String(a.nr||'').trim() === nr);
+  dn.innerHTML = !nr ? 'Bitte die Bestellnummer eintragen.' : (exn ? `⚠︎ Nummer ${esc(nr)} hat schon „${esc(exn.name)}“.` : '');
+}
+function saveEdit(){
+  const name = ed.name.trim();
+  if (!name){ toast('Bitte einen Namen eingeben'); return; }
+  if (!AREAS.some(x => x.id === ed.area)){ toast('Bitte Ordner wählen: Küche oder Service'); return; }
+  const n = norm(name);
+  if (data.articles.find(a => a.id !== ed.id && norm(a.name) === n)){ toast('Diesen Artikel gibt es schon'); return; }
+  if (ed.id){
+    const a = art(ed.id);
+    Object.assign(a, {name, area:ed.area, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim()});
+    save(); closeModal(); render(); toast('Gespeichert'); fillVi(a);
+  } else {
+    const a = {id:uid(), name, area:ed.area, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
+    data.articles.push(a);
+    save(); query=''; render(); openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen'); fillVi(a);
+  }
+}
+function delArticle(id){
+  const a = art(id);
+  if (!confirm('„' + a.name + '“ wirklich löschen? Er verschwindet auch aus allen offenen Listen.')) return;
+  data.articles = data.articles.filter(x => x.id !== id);
+  for (const s of Object.keys(LISTS)) data.lists[s] = data.lists[s].filter(e => e.aid !== id);
+  save(); closeModal(); render(); toast('Gelöscht');
+}
+
+/* ---------- list views ---------- */
+function renderList(store){
+  const L = data.lists[store];
+  const S = data.settings, R = S.recipients;
+  const auto = (t) => S.autoSend ? 'Mail-Versand automatisch So ' + t : 'automatischer Versand aus';
+  let info = '';
+  if (store === 'hamberger') info = `Geht per Mail an <b>${esc(R.hamberger.name)}</b> (${esc(R.hamberger.email)}) · Erinnerung So ${S.times.remindH} · ${auto(S.times.sendH)}`;
+  else if (store === 'kaufland') info = `Geht per Mail an <b>${esc(R.kaufland.name)}</b> (${esc(R.kaufland.email)}) · Erinnerung So ${S.times.remindK} · ${auto(S.times.sendK)}<br>Angehakte Artikel aus „Andere Läden“ werden unten mitgeschickt.`;
+  else info = `Artikel ohne Hamberger/Kaufland. Angehakte („mitschicken“) gehen am Sonntagabend als eigener Block mit der Kauflandliste an <b>${esc(R.kaufland.name)}</b>; nicht angehakte bleiben hier gespeichert.`;
+  const sendStore = store === 'sonstiges' ? 'kaufland' : store;
+  const canSend = !!buildText(sendStore);
+  let h = bannerHTML() + `<div class="lhead"><div class="t"><b>${LISTS[store].long}</b> · ${L.length} Artikel<div>${info}</div></div>
+    <button class="btn sec" onclick="showText('${sendStore}')">Mail ansehen</button>
+    <button class="btn ${LISTS[sendStore].cls}" ${canSend?'':'disabled'} onclick="sendNow('${sendStore}')">Jetzt senden${store==='sonstiges'?' (mit Kaufland)':''}</button></div>`;
+  if (!L.length) return h + `<div class="empty">Liste ist leer.<br><br><button class="btn" onclick="go('order')">Artikel hinzufügen</button></div>`;
+  const rowsAll = L.map(e => ({e, a:art(e.aid)})).filter(x => x.a);
+  for (const ar of AREA_KEYS){
+  const rs = rowsAll.filter(x => aId(x.a) === ar); if (!rs.length) continue;
+  h += `<h2 class="area">${esc(areaName(ar))}</h2>`;
+  const groups = {};
+  rs.forEach(x => (groups[x.a.cat] = groups[x.a.cat] || []).push(x));
+  for (const c of data.cats){
+    const g = groups[c.id]; if (!g) continue;
+    g.sort((x,y) => x.a.name.localeCompare(y.a.name,'de'));
+    h += `<h2 class="cat">${esc(c.name)}</h2>`;
+    for (const {e, a} of g){
+      h += `<div class="row"><div class="nm">${esc(a.name)}${a.vi?` <span class="vi">· ${esc(a.vi)}</span>`:''}<small>${a.nr?'Nr. '+esc(a.nr):'<span style="color:#b3261e">Bestellnr. fehlt</span>'}${a.by?' · eingetragen von '+esc(a.by):''}</small></div>
+        ${store==='sonstiges' ? `<label class="chk"><input type="checkbox" ${e.send!==false?'checked':''} onchange="setSend('${a.id}',this.checked)"> mitschicken</label>` : ''}
+        <div class="mini"><button onclick="qty('${store}','${a.id}',-1)">−</button><span>${e.qty} ${esc(unitLabel(a.unit,e.qty))}</span><button onclick="qty('${store}','${a.id}',1)">+</button></div>
+        <button class="x" title="Entfernen" onclick="removeEntry('${store}','${a.id}')">✕</button></div>`;
+    }
+  }
+  }
+  h += `<div style="margin-top:20px;text-align:right"><button class="btn danger" onclick="clearList('${store}')">Liste leeren</button></div>`;
+  return h;
+}
+function qty(store, aid, d){ const e = data.lists[store].find(x => x.aid === aid); if (!e) return; e.qty = Math.max(1, e.qty + d); save(); render(); }
+function setSend(aid, v){ const e = data.lists.sonstiges.find(x => x.aid === aid); if (e){ e.send = v; save(); } }
+function removeEntry(store, aid){ data.lists[store] = data.lists[store].filter(x => x.aid !== aid); save(); render(); }
+function clearList(store){ if (!confirm(LISTS[store].long + ' wirklich komplett leeren?')) return; data.lists[store] = []; save(); render(); }
+function showText(store){
+  const t = finalText(store);
+  $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
+    <h3>${LISTS[store].long} – Mail</h3>
+    <div class="sub">An ${esc(data.settings.recipients[store].email)}</div>
+    <pre class="msg">${esc(t || '(leer – nichts zu senden)')}</pre>
+    <div class="foot"><button class="btn sec" onclick="copyText('${store}')">Kopieren</button><button class="btn" onclick="closeModal()">Schließen</button></div>
+  </div></div>`;
+}
+function copyText(store){
+  const t = finalText(store);
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Kopiert'), () => toast('Kopieren nicht möglich'));
+}
+
+/* ---------- Versand (über GitHub Actions) ---------- */
+async function dispatch(mode){
+  const r = await gh('/actions/workflows/sonntag.yml/dispatches', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ref:'main', inputs:{mode}})});
+  if (r.status !== 204) throw new Error(r.status === 403 || r.status === 404 ? 'Token darf keine Actions starten' : 'GitHub ' + r.status);
+}
+async function sendNow(store){
+  if (!connected()){ toast('Erst in den Einstellungen mit GitHub verbinden'); go('settings'); return; }
+  const R = data.settings.recipients[store];
+  if (!confirm(LISTS[store].long + ' jetzt per Mail an ' + R.name + ' (' + R.email + ') senden? Danach wird die Liste geleert.')) return;
+  try {
+    save(); clearTimeout(sync.timer); await push();
+    if (lsGet(LS_DIRTY) === '1') throw new Error('Speichern hat nicht geklappt');
+    await dispatch(store);
+    toast('Versand gestartet – die Mail kommt in 1–2 Minuten');
+    let n = 0; const iv = setInterval(() => { refresh(); if (++n > 12) clearInterval(iv); }, 15000);
+  } catch(e){ toast('✗ ' + e.message); }
+}
+async function testMail(){
+  if (!connected()){ toast('Erst mit GitHub verbinden'); return; }
+  try { save(); clearTimeout(sync.timer); await push(); await dispatch('test'); toast('Testmail an beide Adressen gestartet – kommt in 1–2 Minuten'); }
+  catch(e){ toast('✗ ' + e.message); }
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  const S = data.settings, R = S.recipients, c = cfg();
+  const rec = (key, title) => `<div class="card"><h3>${title}</h3><div class="two">
+        <div><label class="f">Name</label><input class="in" value="${esc(R[key].name)}" onchange="setRec('${key}','name',this.value)"></div>
+        <div><label class="f">E-Mail</label><input class="in" type="email" value="${esc(R[key].email)}" onchange="setRec('${key}','email',this.value)"></div>
+      </div></div>`;
+  const t = S.times;
+  const time = (k, l) => `<div><label class="f">${l}</label><input class="in" type="time" value="${t[k]}" onchange="setTime('${k}',this.value)"></div>`;
+  return `<h2 class="cat" style="margin-top:4px">Verbindung (Speicherung & Mailversand)</h2>
+    <div class="card"><div class="two">
+      <div><label class="f">GitHub-Repo</label><input id="cfgrepo" class="in" value="${esc(c.repo || 'Florission/einkauf-daten')}" autocomplete="off"></div>
+      <div><label class="f">Zugangs-Token</label><input id="cfgtok" class="in" type="password" value="${esc(c.token || '')}" placeholder="github_pat_…" autocomplete="off"></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="saveCfg()">Verbinden</button>${connected()?'<button class="btn sec" onclick="testMail()">Testmail senden</button>':''}</div>
+    <div class="hint">Status: ${esc(syncLabel())}. Das Token wird nur auf diesem Gerät gespeichert. Auf jedem Gerät, das die App nutzt, einmal eintragen.</div></div>
+    <h2 class="cat">Empfänger</h2>
+    ${rec('kaufland','Kauflandliste + Andere Läden → an')}
+    ${rec('hamberger','Hambergerliste → an')}
+    <h2 class="cat">Zeiten (jeden Sonntag)</h2><div class="card"><div class="two">
+    ${time('remindH','Erinnerung Hambergerliste')}${time('sendH','Versand Hambergerliste')}
+    ${time('remindK','Erinnerung Kauflandliste')}${time('sendK','Versand Kauflandliste')}
+    </div><label class="chk" style="margin-top:14px;font-size:16px;color:var(--ink)"><input type="checkbox" ${S.autoSend?'checked':''} onchange="data.settings.autoSend=this.checked;save()"> Listen sonntags automatisch per Mail senden</label>
+    <div class="hint">Der Versand läuft über GitHub – das iPad muss dafür nicht an sein. Er startet in der ersten halben Stunde nach der eingestellten Zeit. Leere Listen werden nicht verschickt. Die Erinnerung erscheint, wenn die App sonntags ab der Erinnerungszeit geöffnet ist oder geöffnet wird.</div></div>
+    <h2 class="cat">Übersetzung (Vietnamesisch)</h2><div class="card">
+    <label class="chk" style="font-size:16px;color:var(--ink)"><input type="checkbox" ${S.viMail?'checked':''} onchange="data.settings.viMail=this.checked;save()"> Vietnamesische Namen in den Mails mitschicken</label>
+    <div class="hint">Neue Artikel werden beim Eintragen automatisch übersetzt (Google Übersetzer, braucht Internet). Die Übersetzung kann man im Artikel jederzeit korrigieren; die Suche findet Artikel auch auf Vietnamesisch.</div>
+    <div style="margin-top:10px"><button class="btn sec" ${data.articles.some(a => !a.vi)?'':'disabled'} onclick="fillAllVi()">Fehlende Übersetzungen ergänzen (${data.articles.filter(a => !a.vi).length})</button></div></div>
+    <h2 class="cat">Kategorien</h2><div class="card"><div class="hint" style="margin:0 0 10px">Stichwörter (durch Komma getrennt) steuern den automatischen Vorschlag.</div>
+    ${data.cats.map(c => `<div class="catrow"><input class="in" value="${esc(c.name)}" onchange="renCat('${c.id}',this.value)"><input class="in kw" value="${esc(c.kw)}" placeholder="Stichwörter …" onchange="kwCat('${c.id}',this.value)">${c.id==='sonstiges'?'<span></span>':`<button class="x" onclick="delCat('${c.id}')">✕</button>`}</div>`).join('')}
+    <button class="btn sec" style="margin-top:8px" onclick="addCat()">＋ Kategorie</button></div>
+    <h2 class="cat">Verlauf (gesendet)</h2><div class="card">
+    ${data.history.length ? data.history.slice(0,25).map(x => `<details><summary>${esc(x.when || '')} – ${esc(LISTS[x.store]?.long||x.store)} an ${esc(x.to||'')}${x.auto?' (automatisch)':''}</summary><pre class="msg">${esc(x.text)}</pre></details>`).join('') : '<div class="hint">Noch nichts gesendet.</div>'}
+    </div><h2 class="cat">Sicherung</h2><div class="card">
+    <div class="hint" style="margin:0 0 10px">Jede Änderung wird im Repo gespeichert (mit kompletter Versionsgeschichte). Zusätzlich kann man hier eine Datei exportieren.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" onclick="exportData()">Sicherung exportieren</button><button class="btn sec" onclick="$('#imp').click()">Sicherung importieren</button></div>
+    <input type="file" id="imp" accept="application/json,.json" style="display:none" onchange="importFile(this.files[0])"></div>
+    <div class="hint" style="text-align:center;margin-top:20px">${data.articles.length} Artikel · ${data.cats.length} Kategorien</div>`;
+}
+async function saveCfg(){
+  const repo = $('#cfgrepo').value.trim().replace(/^https:\/\/github.com\//,'').replace(/\/$/,'');
+  const token = $('#cfgtok').value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token){ toast('Repo und Token angeben'); return; }
+  lsSet(LS_CFG, JSON.stringify({repo, token}));
+  sync.sha = null;
+  try {
+    const p = await pull();
+    if (p){
+      sync.sha = p.sha;
+      const local = data;
+      const hasLocal = local.articles.length > 0 && lsGet(LS_DIRTY) !== '0';
+      data = hasLocal ? merge(local, p.d) : fixup(p.d);
+      writeLocal();
+      if (hasLocal){ lsSet(LS_DIRTY,'1'); await push(); }
+    } else { sync.sha = undefined; lsSet(LS_DIRTY,'1'); await push(); }
+    setSync('ok'); render(); toast('✓ Verbunden');
+  } catch(e){ setSync('err', e.message); render(); toast('✗ ' + (e.message.includes('401') ? 'Token ungültig' : e.message.includes('404') ? 'Repo nicht gefunden / kein Zugriff' : e.message)); }
+}
+function setRec(k, f, v){ data.settings.recipients[k][f] = v.trim(); save(); }
+function setTime(k, v){ if (!/^\d\d:\d\d$/.test(v)) return; data.settings.times[k] = v; save(); }
+function renCat(id, v){ v = v.trim(); if (!v) return; cat(id).name = v; save(); }
+function kwCat(id, v){ cat(id).kw = v; save(); }
+function addCat(){ const n = prompt('Name der neuen Kategorie:'); if (!n || !n.trim()) return; data.cats.splice(data.cats.length-1, 0, {id:uid(), name:n.trim(), kw:''}); save(); render(); }
+function delCat(id){
+  const used = data.articles.filter(a => a.cat === id).length;
+  if (!confirm('Kategorie „' + cat(id).name + '“ löschen?' + (used ? ' ' + used + ' Artikel wandern nach „Sonstiges“.' : ''))) return;
+  data.articles.forEach(a => { if (a.cat === id) a.cat = 'sonstiges'; });
+  data.cats = data.cats.filter(c => c.id !== id); save(); render();
+}
+function exportData(){
+  const b = new Blob([JSON.stringify(data, null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'einkauf-sicherung-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+}
+function importFile(f){
+  if (!f) return;
+  f.text().then(t => {
+    const d = JSON.parse(t);
+    if (!d || !Array.isArray(d.articles)) throw 0;
+    if (!confirm('Sicherung mit ' + d.articles.length + ' Artikeln laden? Die aktuellen Daten werden ersetzt.')) return;
+    d.rev = data.rev; data = fixup(d); save(); render(); toast('Sicherung geladen');
+  }).catch(() => toast('Datei ist keine gültige Sicherung'));
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderHeader();
+  const m = $('#main');
+  if (view === 'order') m.innerHTML = renderOrder();
+  else if (LISTS[view]) m.innerHTML = renderList(view);
+  else m.innerHTML = renderSettings();
+}
+
+load();
+if (connected()) sync.state = 'ok';
+render();
+refresh().then(checkReminderPopup);
+setInterval(() => { if (document.visibilityState === 'visible'){ refresh(); if (view !== 'settings' && !$('#modal').innerHTML && dueReminders().length) { if (view==='order' && !query) render(); } checkReminderPopup(); } }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh().then(checkReminderPopup); });
+window.addEventListener('online', () => push());
+</script>
+</body>
+</html>
