@@ -709,7 +709,7 @@ function renderSettings(){
       <div><label class="f">GitHub-Repo</label><input id="cfgrepo" class="in" value="${esc(c.repo || 'Florission/einkauf-daten')}" autocomplete="off"></div>
       <div><label class="f">Zugangs-Token</label><input id="cfgtok" class="in" type="password" value="${esc(c.token || '')}" placeholder="github_pat_…" autocomplete="off"></div>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="saveCfg()">Verbinden</button>${connected()?'<button class="btn sec" onclick="testMail()">Testmail senden</button>':''}</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="saveCfg()">Verbinden</button>${connected()?'<button class="btn sec" onclick="testMail()">Testmail senden</button><button class="btn sec" onclick="copyConnCode()">Verbindungscode kopieren</button>':''}</div>
     <div class="hint">Status: ${esc(syncLabel())}. Das Token wird nur auf diesem Gerät gespeichert. Auf jedem Gerät, das die App nutzt, einmal eintragen.</div></div>
     <h2 class="cat">Empfänger</h2>
     ${rec('kaufland','Kauflandliste + Andere Läden → an')}
@@ -733,6 +733,12 @@ function renderSettings(){
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" onclick="exportData()">Sicherung exportieren</button><button class="btn sec" onclick="$('#imp').click()">Sicherung importieren</button></div>
     <input type="file" id="imp" accept="application/json,.json" style="display:none" onchange="importFile(this.files[0])"></div>
     <div class="hint" style="text-align:center;margin-top:20px">${data.articles.length} Artikel · ${data.cats.length} Kategorien</div>`;
+}
+// Code für Reservierung/Bestellbon auf anderen Geräten (dort beim „Abgleich einrichten“ einfügen)
+async function copyConnCode(){
+  const c = cfg(), code = 'LC1:' + btoa(JSON.stringify({repo:c.repo, token:c.token}));
+  try { await navigator.clipboard.writeText(code); toast('✓ Verbindungscode kopiert'); }
+  catch(e){ prompt('Verbindungscode – markieren und kopieren:', code); }
 }
 async function saveCfg(){
   const repo = $('#cfgrepo').value.trim().replace(/^https:\/\/github.com\//,'').replace(/\/$/,'');

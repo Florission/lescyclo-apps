@@ -6,7 +6,15 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
+<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* Handy */
+@media (max-width:700px){
+  body{overflow-x:hidden}
+  .tabs{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:0 0 auto}
+}
+</style>
 <script>/* kein Zoomen per Doppeltipp/Zwei-Finger */document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});</script>
 <title>Reservierungen Le's Cyclo</title>
 <style>
@@ -696,6 +704,7 @@ const css=document.createElement("style");css.textContent=`
 #resDrawer .rdTimeRow button:active{background:var(--accent);color:var(--accent-fg)}
 #resDrawer #fTime{min-height:56px;height:100%;font-size:30px;font-weight:800;text-align:center;font-family:var(--font-num);
   background:var(--surface);color:var(--fg);border:2px solid var(--accent);border-radius:var(--r);padding:4px 6px;cursor:pointer;min-width:0}
+@media (max-width:480px){#resDrawer .rdTimeRow{grid-template-columns:auto 1fr auto;grid-template-areas:'a t d' 'b t c'}#resDrawer .rdTimeRow button{min-width:0;min-height:44px;font-size:15px}#resDrawer .rdTimeRow>:nth-child(1){grid-area:a}#resDrawer .rdTimeRow>:nth-child(2){grid-area:b}#resDrawer .rdTimeRow>:nth-child(3){grid-area:t}#resDrawer .rdTimeRow>:nth-child(4){grid-area:c}#resDrawer .rdTimeRow>:nth-child(5){grid-area:d}}
 #resDrawer .rdTimeEnd{font-size:14px;color:var(--fg);text-align:center;font-weight:600}
 .tbl .rchips{display:flex;flex-direction:column;gap:2px;width:100%;padding:0 3px;margin-top:2px}
 .tbl .rchip{font:inherit;font-size:.78em;line-height:1.2;min-height:0!important;padding:1px 4px;border-radius:4px;

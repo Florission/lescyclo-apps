@@ -23,3 +23,16 @@ window.Android = {
     });
   }
 };
+
+// Abgleich zwischen Geräten (Handy / iPad / Tablet)
+LC.setupSync({
+  keys: ['reservierungen', 'gaeste', 'einstellungen'],
+  // nicht abgleichen, während Tischplan/Einstellungen bearbeitet werden
+  canSync: () => typeof view === 'undefined' || view !== 'einst',
+  onChange: () => {
+    res = load('reservierungen', []); guests = load('gaeste', []);
+    cfg = Object.assign({}, cfg, load('einstellungen', {}));
+    if (editId && !res.some((r) => r.id === editId)) resetForm();
+    show(view);
+  }
+});

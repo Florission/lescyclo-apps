@@ -6,7 +6,17 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
+<style>html,body,*{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* Handy */
+@media (max-width:700px){
+  body{overflow-x:hidden}
+  .tabs{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:0 0 auto}
+  .planWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .plan{min-width:600px}
+}
+</style>
 <script>/* kein Zoomen per Doppeltipp/Zwei-Finger */document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});</script>
 <title>Bestellbon Le's Cyclo</title>
 <style>
