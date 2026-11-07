@@ -13,8 +13,6 @@
   .tabs{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
   .tabs button{flex:0 0 auto}
-  .planWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .plan{min-width:600px}
 }
 </style>
 <script>/* kein Zoomen per Doppeltipp/Zwei-Finger */document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});</script>
@@ -107,25 +105,63 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .pStat{font-family:var(--font-num);color:var(--muted);font-size:14px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--accent-soft);border-radius:var(--r);padding:8px 10px}
 .bar input{flex:1;min-width:200px}
-.planWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.plan{position:relative;width:min(100%,calc((100vh - 240px)*1.6));margin:0 auto;min-width:680px;aspect-ratio:16/10;border:1px solid var(--line);border-radius:12px;container-type:inline-size;overflow:hidden;background:var(--bg)}
-.tpT{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3cqw;border:2px solid var(--accent);border-radius:8px;background:var(--surface);color:var(--fg);cursor:pointer;user-select:none;-webkit-user-select:none;line-height:1.05;touch-action:manipulation;text-align:center}
-.tpT b{font-size:2.8cqw}
-.tpT small{font-family:var(--font-num);font-size:1.3cqw;font-weight:600}
-.tpT.busy{background:var(--blue-soft);border-color:var(--blue)}
-.tpT.draft{border-style:dashed;border-color:var(--warn)}
+.planWrap{overflow:auto;-webkit-overflow-scrolling:touch}
+#v-plan .panel{padding:12px;gap:10px}
+.pHead .actions button{min-height:48px;padding:8px 14px;font-size:16px}
+.pvSw{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
+.pvSw button{border:none;background:transparent;min-height:44px;padding:6px 16px;font-size:16px}
+.pvSw button.on{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.plan{position:relative;width:min(100%,calc((100dvh - var(--planTop,190px))*var(--ar,1.2)*1.3));min-width:560px;margin:0 auto;border-radius:12px;container-type:inline-size;overflow:hidden;background:var(--bg)}
+.tpT{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4cqw;border:3px solid var(--accent);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer;user-select:none;-webkit-user-select:none;line-height:1;touch-action:manipulation;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.08);overflow:hidden}
+.tpT b{font-size:4.6cqw;font-weight:800;letter-spacing:-.02em}
+.tpT.busy b,.tpT.draft b{font-size:3.4cqw}
+.tpT small{font-family:var(--font-num);font-size:1.8cqw;font-weight:700;white-space:nowrap}
+.tpT i{font-style:normal;font-size:1.35cqw;opacity:.9;white-space:nowrap}
+.tpT.busy{background:var(--blue);border-color:var(--blue);color:#fff}
+.tpT.draft{background:var(--warn-soft);border-style:dashed;border-color:var(--warn);color:var(--fg)}
+.tpT.busy.draft{background:var(--blue);color:#fff;border-color:var(--warn);border-style:solid;box-shadow:0 0 0 3px var(--warn)}
 .tpT.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
-.tpT:active{filter:brightness(.92)}
-.tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--muted);color:var(--muted);font-size:2.2cqw;border-radius:6px}
-.tpW{position:absolute;background:var(--fg);opacity:.85;border-radius:2px}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
-.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid var(--accent);background:var(--surface);vertical-align:-2px;margin-right:5px}
-.legend i.busy{background:var(--blue-soft);border-color:var(--blue)}
-.legend i.draft{border-style:dashed;border-color:var(--warn)}
+.tpT:active{filter:brightness(.9)}
+.tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);color:var(--muted);font-size:1.8cqw;border-radius:6px;opacity:.8}
+.tpD.small{font-size:0;border:none}
+.tpW{position:absolute;background:var(--muted);opacity:.35;border-radius:3px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:16px;height:16px;border-radius:4px;border:2px solid var(--accent);background:var(--surface);vertical-align:-3px;margin-right:6px}
+.legend i.busy{background:var(--blue);border-color:var(--blue)}
+.legend i.draft{border-style:dashed;border-color:var(--warn);background:var(--warn-soft)}
+/* Tische als Liste */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.tgrid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:104px;padding:8px;border:3px solid var(--accent);border-radius:12px}
+.tgrid button b{font-size:32px;font-weight:800;line-height:1}
+.tgrid button small{font-family:var(--font-num);font-size:16px;font-weight:700}
+.tgrid button i{font-style:normal;font-size:13px;opacity:.85}
+.tgrid button.busy{background:var(--blue);border-color:var(--blue);color:#fff}
+.tgrid button.draft{background:var(--warn-soft);border-style:dashed;border-color:var(--warn)}
+.tgrid button.busy.draft{background:var(--blue);color:#fff;border-style:solid;box-shadow:0 0 0 3px var(--warn)}
+.tgrid button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.tgrid .tgH{grid-column:1/-1;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:4px}
+/* Tisch-Ansicht auf schmalen Geräten: Speisekarte / Rechnung umschalten */
+.tSw{display:none}
+.tSwMore{display:none}
+@media (max-width:900px){
+  .tSw{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+  .tSw button{flex:1;min-height:58px;font-size:17px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.1}
+  .tSw button small{font-family:var(--font-num);font-size:13px;font-weight:700}
+  .tSw button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
+  .tSw button .cnt{font-family:var(--font-num);font-weight:700}
+  #tGrid.showK>.panel.sticky{display:none}
+  #tGrid.showR>.panel:first-child{display:none}
+  #tGrid{margin-top:4px!important}
+  .sticky{position:static}
+  .tSwMore{display:block;border-style:dashed;color:var(--accent);font-weight:600}
+}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+.tSw button.bump{animation:bump .35s ease}
 .tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:84px;text-align:left;background:var(--blue-soft);border-color:var(--blue)}
 .tbtn b{font-size:17px}.tbtn span{font-family:var(--font-num);color:var(--muted);font-size:14px}
-.tpDlg{width:min(980px,96vw);max-width:none}
+.tpDlg{width:min(980px,96vw);max-width:none;max-height:96dvh;overflow:auto}
+.tpDlg .plan{width:min(100%,calc((100dvh - 230px)*var(--ar,1.2)));min-width:0}
 
 /* Tisch-Ansicht */
 .tHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -164,8 +200,9 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
   <section id="v-plan">
     <div class="panel">
       <div class="pHead">
-        <div><h2>Tischplan</h2><div class="pStat" id="pStat"></div></div>
+        <div><h2>Tische</h2><div class="pStat" id="pStat"></div></div>
         <div class="actions">
+          <div class="pvSw" id="pvSw"><button data-pv="plan">Plan</button><button data-pv="liste">Liste</button></div>
           <button id="pMulti">Tische zusammen</button>
           <button id="pFree">Ohne Tisch / Abholung</button>
         </div>
@@ -179,7 +216,8 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
         <button id="pFreeCancel">Abbrechen</button><button id="pFreeOk" class="primary">Öffnen</button>
       </div>
       <div class="msg" id="pMsg" role="status"></div>
-      <div class="planWrap"><div class="plan" id="plan"></div></div>
+      <div class="planWrap" id="planWrap"><div class="plan" id="plan"></div></div>
+      <div class="tgrid" id="tgrid" hidden></div>
       <div class="legend"><span><i></i>frei</span><span><i class="busy"></i>offen (Summe)</span><span><i class="draft"></i>noch nicht boniert</span></div>
       <div id="pOtherBox" hidden><div class="grp" style="margin-bottom:8px">Ohne Tisch</div><div class="tlist" id="pOther"></div></div>
     </div>
@@ -192,7 +230,8 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
       <h2 id="tTitle"></h2>
       <button id="tMove">Tisch wechseln</button>
     </div>
-    <div class="grid" style="margin-top:14px">
+    <div class="tSw" id="tSw"><button data-tp="karte">Speisekarte</button><button data-tp="rechnung">Rechnung</button></div>
+    <div class="grid" id="tGrid" style="margin-top:14px">
       <div class="panel">
         <div class="seg" id="cats"></div>
         <div class="items" id="items"></div>
@@ -375,28 +414,65 @@ window.onBack=()=>{
   if(!$("tpBox").hidden)return $("tpBox").hidden=true;
   if(view==="tisch"&&mode==="pay"){mode="order";return renderTisch();}
   if(view!=="plan")show("plan");};
-function openTable(label){cur=label;gangSel=1;mode="order";noteOpen=-1;say("");show("tisch");}
+let tPane="karte";
+function openTable(label){cur=label;gangSel=1;mode="order";noteOpen=-1;say("");
+  tPane=(tabs[label]||draftOf(label).length)?"rechnung":"karte";show("tisch");}
+function setPane(p){tPane=p;updSw();window.scrollTo(0,0);}
+document.querySelectorAll("#tSw button").forEach(b=>b.onclick=()=>setPane(b.dataset.tp));
+function updSw(bump){if(!cur)return;const t=tabs[cur],dr=draftOf(cur),n=(t?t.lines.reduce((a,l)=>a+l.qty,0):0)+dr.reduce((a,l)=>a+l.qty,0);
+  const g=$("tGrid");g.classList.toggle("showK",tPane==="karte");g.classList.toggle("showR",tPane==="rechnung");
+  const [bk,br]=document.querySelectorAll("#tSw button");bk.classList.toggle("on",tPane==="karte");br.classList.toggle("on",tPane==="rechnung");
+  const nn=dr.reduce((a,l)=>a+l.qty,0);
+  br.innerHTML=`<span>${mode==="pay"?"Abrechnen":"Rechnung"}</span>`+(n?`<small>${n} Pos. · ${eur((t?total(t):0)+sumL(dr))}${nn?` · +${nn}`:""}</small>`:"");
+  if(bump){br.classList.remove("bump");void br.offsetWidth;br.classList.add("bump");}}
 
 /* ---------- Tischplan ---------- */
-const pos=(el,t)=>{el.style.left=t.x/PW*100+"%";el.style.top=t.y/PH*100+"%";el.style.width=t.w/PW*100+"%";el.style.height=t.h/PH*100+"%";};
+/* Plan auf den belegten Bereich zuschneiden → alles größer */
+const BB=(()=>{const P=8,x0=Math.min(...PLAN.map(t=>t.x))-P,y0=Math.min(...PLAN.map(t=>t.y))-P,
+  x1=Math.max(...PLAN.map(t=>t.x+t.w))+P,y1=Math.max(...PLAN.map(t=>t.y+t.h))+P;return {x0,y0,w:x1-x0,h:y1-y0};})();
+const pos=(el,t,g)=>{g=g||0;el.style.left=(t.x+g-BB.x0)/BB.w*100+"%";el.style.top=(t.y+g-BB.y0)/BB.h*100+"%";
+  el.style.width=(t.w-2*g)/BB.w*100+"%";el.style.height=(t.h-2*g)/BB.h*100+"%";};
+/* Infos zu einem Tisch: Klasse, Betrag, seit wann */
+function tInfo(id,map,sel){const k=map[id],tb=k&&tabs[k],dr=k&&draftOf(k).length,ids=k?tablesOf(k):[];
+  const cls=(tb?" busy":"")+(dr?" draft":"")+(sel.includes(id)?" on":"");
+  let sub="",tm="";
+  if(k){if(ids.length>1&&ids[0]!==id)sub="mit "+ids[0];
+    else{sub=tb?eur(total(tb)+sumL(draftOf(k))).replace(" €",""):"neu";
+      if(tb&&tb.opened)tm="seit "+hm(new Date(tb.opened));}}
+  return {k,cls,sub,tm};}
 function drawPlan(box,sel,map,onTap){box.textContent="";
-  for(const t of PLAN){const el=document.createElement("div");pos(el,t);
-    if(t.wall)el.className="tpW";
-    else if(t.shape==="deko"){el.className="tpD";el.textContent=t.id;}
-    else{const k=map[t.id],tb=k&&tabs[k],dr=k&&draftOf(k).length,ids=k?tablesOf(k):[];
-      el.className="tpT"+(tb?" busy":"")+(dr?" draft":"")+(sel.includes(t.id)?" on":"");
-      let sub="";
-      if(k){if(ids.length>1&&ids[0]!==t.id)sub="mit "+ids[0];
-        else sub=tb?eur(total(tb)+sumL(draftOf(k))).replace(" €",""):"neu";}
-      el.innerHTML=`<b>${esc(t.id)}</b>`+(sub?`<small>${esc(sub)}</small>`:"");
-      el.onclick=()=>onTap(t.id,k);}
+  box.style.setProperty("--ar",(BB.w/BB.h).toFixed(4));box.style.aspectRatio=BB.w+"/"+BB.h;
+  for(const t of PLAN){const el=document.createElement("div");
+    if(t.wall){pos(el,t);el.className="tpW";}
+    else if(t.shape==="deko"){pos(el,t);el.className="tpD"+(t.w<60||t.h<60?" small":"");el.textContent=t.id;}
+    else{pos(el,t,3);const n=tInfo(t.id,map,sel);
+      el.className="tpT"+n.cls;
+      el.innerHTML=`<b>${esc(t.id)}</b>`+(n.sub?`<small>${esc(n.sub)}</small>`:"")+(n.tm&&t.h>=70?`<i>${esc(n.tm)}</i>`:"");
+      el.onclick=()=>onTap(t.id,n.k);}
     box.append(el);}}
+function drawList(box,sel,map,onTap){box.textContent="";
+  const ids=[...TIDS].sort((a,b)=>Number(a)-Number(b));
+  const busy=ids.filter(id=>map[id]),free=ids.filter(id=>!map[id]);
+  const sec=(title,list)=>{if(!list.length)return;const h=document.createElement("div");h.className="tgH";h.textContent=title;box.append(h);
+    for(const id of list){const n=tInfo(id,map,sel),b=document.createElement("button");b.className=n.cls.trim();
+      b.innerHTML=`<b>${esc(id)}</b>`+(n.sub?`<small>${esc(n.sub)}${/^[\d.,]+$/.test(n.sub)?" €":""}</small>`:"")+(n.tm?`<i>${esc(n.tm)}</i>`:"");
+      b.onclick=()=>onTap(id,n.k);box.append(b);}};
+  sec("Besetzt",busy);sec("Frei",free);}
 let multi=false,msel=[];
+let planView=(()=>{try{return localStorage.getItem("bon_planView")||"";}catch(e){return "";}})()||(innerWidth<700?"liste":"plan");
+document.querySelectorAll("#pvSw button").forEach(b=>b.onclick=()=>{planView=b.dataset.pv;try{localStorage.setItem("bon_planView",planView);}catch(e){}renderPlan();});
+function fitPlan(){const p=$("plan");if(!p||$("v-plan").hidden)return;
+  const top=p.getBoundingClientRect().top+window.scrollY,leg=50;p.style.setProperty("--planTop",Math.round(top+leg)+"px");}
+window.addEventListener("resize",()=>{if(view==="plan")fitPlan();});
 function renderPlan(){const map=occupancy(),labels=openLabels();
-  drawPlan($("plan"),multi?msel:[],map,(id,k)=>{
+  const onTap=(id,k)=>{
     if(multi){if(k)return say(`Tisch ${id} ist schon besetzt.`,"err",$("pMsg"));
       msel=msel.includes(id)?msel.filter(x=>x!==id):[...msel,id];say("","",$("pMsg"));return renderPlan();}
-    openTable(k||labelFor([id]));});
+    openTable(k||labelFor([id]));};
+  const asList=planView==="liste";
+  document.querySelectorAll("#pvSw button").forEach(b=>b.classList.toggle("on",b.dataset.pv===planView));
+  $("planWrap").hidden=asList;$("tgrid").hidden=!asList;
+  if(asList)drawList($("tgrid"),multi?msel:[],map,onTap);else{drawPlan($("plan"),multi?msel:[],map,onTap);requestAnimationFrame(fitPlan);}
   $("pMultiBar").hidden=!multi;$("pMulti").classList.toggle("on",multi);
   $("pMultiOk").disabled=!msel.length;$("pMultiOk").textContent=msel.length?"Öffnen: "+labelFor(msel):"Öffnen";
   const others=labels.filter(k=>!tablesOf(k).some(id=>TIDS.includes(id))).sort();
@@ -481,17 +557,18 @@ function addLine(it,vi,opt,ov){if(!cur)return;ov=ov||{};const v=it.variants[vi],
   const cn=ov.cat||(menu[cat]||{}).name||"",isDr=ov.drink||DRINKS.includes(cn),gg=isDr?undefined:gangSel,price=ov.price!=null?ov.price:v.price;
   const same=dr.find(l=>!l.note&&!(l.extras||[]).length&&l.gang===gg&&l.name===it.name&&l.nr===it.nr&&l.variant===(v.label||"")&&l.option===(opt||"")&&l.price===price);
   if(same)same.qty++;else{const nl={cat:cn,nr:it.nr||"",name:it.name,variant:v.label||"",option:opt||"",price,qty:1,note:"",gang:gg};if(isDr)nl.drink=true;dr.push(nl);}
-  saveDrafts();mode="order";say("");renderSide();}
+  saveDrafts();mode="order";say("");renderSide();updSw(true);}
 
 /* ---------- Tisch: Rechnung (gebucht + neu) ---------- */
 let noteOpen=-1,gangSel=1;
 function renderTisch(){if(!cur)return show("plan");
   $("tTitle").textContent=cur;renderMenu();
   if(mode==="pay"&&!tabs[cur])mode="order";
-  if(mode==="pay")renderPay();else renderSide();}
+  if(mode==="pay")renderPay();else renderSide();updSw();}
 function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   s.innerHTML=`<div class="sideHead"><h2>Rechnung ${esc(cur)}</h2>${t?`<span class="note">seit ${hm(new Date(t.opened))}</span>`:""}</div>
     <div class="gangSel"><span class="note">Neue Speisen:</span><div class="seg" id="gSel"></div></div>
+    <button id="tSwMore" class="tSwMore">+ Artikel aus der Speisekarte</button>
     <div class="lines" id="lines"></div>
     <div class="sum"><span>Gesamt</span><span>${eur((t?total(t):0)+sumL(dr))}</span></div>
     <div class="actions">${dr.length?`<button id="dClear" class="danger">Neue verwerfen</button>`:""}
@@ -535,7 +612,9 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
     if(b.textContent!=="Wirklich verwerfen?"){b.textContent="Wirklich verwerfen?";setTimeout(()=>{if(b.isConnected)b.textContent="Neue verwerfen";},3000);return;}
     delete drafts[cur];saveDrafts();say("");renderSide();};
   $("dBook").onclick=book;
-  $("toPay").onclick=()=>{if(!tabs[cur]||draftOf(cur).length)return;mode="pay";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();};}
+  $("toPay").onclick=()=>{if(!tabs[cur]||draftOf(cur).length)return;mode="pay";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();};
+  if($("tSwMore"))$("tSwMore").onclick=()=>setPane("karte");
+  updSw();}
 
 /* Bonieren: Küchenbon (Speisen nach Gängen) + separater Getränkebon, dann auf den Tisch buchen */
 function book(){const dr=draftOf(cur);if(!dr.length)return;
@@ -572,7 +651,7 @@ function renderPay(){const d=$("side"),t=tabs[cur];if(!t){mode="order";return re
   <div class="tsum big"><span>Zu zahlen</span><span>${eur(sub-dv)}</span></div>
   <div class="actions"><button id="tPaid">Ohne Druck abrechnen</button><button id="tBill" class="primary big">Rechnung drucken</button></div>
   <div class="actions"><button id="tKitchen">Bon nachdrucken</button></div>`;
-  $("tBackOrder").onclick=()=>{mode="order";say("");renderSide();};
+  $("tBackOrder").onclick=()=>{mode="order";say("");renderSide();};updSw();
   const lb=$("tLines");
   t.lines.forEach((l,i)=>{const r=document.createElement("div");r.className="pl"+(pay[i]?"":" off");
     const q=document.createElement("div");q.className="q";

@@ -111,6 +111,15 @@ summary{cursor:pointer;font-weight:600}
 .sync.err{color:#ffb4a8}
 .vi{color:var(--acc);font-weight:500;font-size:14px;font-style:italic}
 .row .nm .vi{font-size:15px}
+.fold{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fold button{padding:12px 18px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:17px}
+.fold button.on{background:var(--top);color:#fff;border-color:var(--top)}
+.fold button.no{border-color:#e9b7b2;color:#b3261e}
+.fold small{font-weight:400;opacity:.75}
+.fold .n{display:inline-block;min-width:22px;padding:1px 7px;margin-left:8px;border-radius:20px;font-size:13px;background:#f0ede7;color:var(--ink);text-align:center}
+.fold button.on .n{background:rgba(255,255,255,.2);color:#fff}
+h2.area{font-size:22px;margin:28px 4px 2px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.seg.big button{padding:14px 20px;font-size:18px}
 .warn{background:#fdecea;border:1px solid #f1b8b0;border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
 </style>
 </head>
@@ -132,12 +141,19 @@ const LISTS = {
   kaufland:{name:'Kaufland', long:'Kauflandliste', cls:'k'},
   sonstiges:{name:'Andere Läden', long:'Andere Läden', cls:'o'}
 };
+const AREAS = [
+  {id:'kueche', name:'Küche', icon:'🍳'},
+  {id:'service', name:'Service', icon:'🍽️'}
+];
+const AREA_KEYS = AREAS.map(x => x.id).concat(['']);
+const LS_AREA = 'lescyclo_einkauf_area';
 const DEFAULT_CATS = [
   {id:'gemuese', name:'Obst & Gemüse', kw:'tomate,gurke,salat,zwiebel,knoblauch,ingwer,zitrone,limette,koriander,minze,basilikum,petersilie,paprika,chili,karotte,möhre,kohl,sprossen,mungo,lauch,avocado,mango,banane,apfel,ananas,kartoffel,pilz,champignon,aubergine,zucchini,rettich,rucola,zitronengras,lemongras,beere,erdbeer,orange,gemüse,obst,kräuter,brokkoli,spinat,edamame,shiitake,pak choi,gurken,radieschen,kürbis,mais,dill,schnittlauch,thai'},
   {id:'fleisch', name:'Fleisch & Fisch', kw:'rind,hähnchen,huhn,chicken,schwein,ente,garnele,shrimp,lachs,fisch,hack,filet,wurst,speck,bauch,brust,keule,schenkel,pute,tintenfisch,calamari,thunfisch,meeresfrüchte,steak'},
   {id:'kuehl', name:'Kühlware & Molkerei', kw:'milch,sahne,butter,käse,joghurt,ei,eier,quark,tofu,mozzarella,schmand,feta,frischkäse,margarine'},
   {id:'trocken', name:'Trockenware & Saucen', kw:'reis,nudel,reisnudel,glasnudel,mehl,zucker,salz,pfeffer,gewürz,öl,essig,sojasauce,sojasoße,soja,fischsauce,fischsoße,hoisin,sriracha,sauce,soße,erdnuss,sesam,kokosmilch,konserve,dose,reispapier,stärke,brühe,bohnen,linsen,kondensmilch,honig,nüsse,cashew,curry,paste,ketchup,mayo,mayonnaise,senf,sambal,austernsauce,glutamat,brühpulver,panko,chips'},
   {id:'getraenke', name:'Getränke', kw:'wasser,cola,fanta,sprite,saft,bier,wein,limo,limonade,schorle,mate,tee,sirup,eistee,kaffee,espresso,bohnenkaffee,sekt,prosecco,tonic,ginger,kombucha,smoothie,sprudel,mineralwasser'},
+  {id:'lehmann', name:'Lehmann (Getränke)', kw:'lehmann'},
   {id:'tk', name:'Tiefkühl', kw:'tk,tiefkühl,gefroren,eis,eiswürfel,pommes,frühlingsrolle,frühlingsrollen,gyoza,dumpling'},
   {id:'back', name:'Brot & Backwaren', kw:'brot,baguette,brötchen,banh mi,bánh mì,toast,wrap,tortilla'},
   {id:'verpackung', name:'Verpackung & Einweg', kw:'box,boxen,schale,becher,deckel,tüte,tüten,beutel,serviette,servietten,strohhalm,besteck,stäbchen,alufolie,frischhaltefolie,folie,backpapier,bonrolle,kassenrolle,menübox,to-go,togo,karton,gabel,löffel,dressingbecher,etikett,klebeband'},
@@ -160,6 +176,10 @@ const art = id => data.articles.find(a => a.id === id);
 const cat = id => data.cats.find(c => c.id === id) || data.cats.find(c => c.id === 'sonstiges');
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
+const aId = a => AREAS.some(x => x.id === a.area) ? a.area : '';
+function areaName(id, icon){ const x = AREAS.find(a => a.id === id); if (!x) return (icon===false?'':'⚠︎ ') + 'Ohne Ordner'; return (icon===false?'':x.icon+' ') + x.name + (x.sub ? ' (' + x.sub + ')' : ''); }
+let areaF = lsGet(LS_AREA) ?? 'all';
+function setArea(id){ areaF = id; lsSet(LS_AREA, id); query = ''; render(); }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2800); }
 function berlinNow(){
   const p = new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
@@ -196,6 +216,8 @@ function fixup(d){
   for (const k of ['kaufland','hamberger']) d.settings.recipients[k] = Object.assign(defaults().settings.recipients[k], d.settings.recipients[k]);
   d.settings.times = Object.assign(defaults().settings.times, d.settings.times || {});
   if (!Array.isArray(d.cats) || !d.cats.length) d.cats = JSON.parse(JSON.stringify(DEFAULT_CATS));
+  if (!d.cats.find(c => c.id === 'lehmann')){ const i = d.cats.findIndex(c => c.id === 'getraenke'); d.cats.splice(i >= 0 ? i + 1 : Math.max(0, d.cats.length - 1), 0, {id:'lehmann', name:'Lehmann (Getränke)', kw:'lehmann'}); }
+  (d.articles || []).forEach(a => { if (a.area === 'lehmann'){ a.cat = 'lehmann'; delete a.area; } });
   if (!d.cats.find(c => c.id === 'sonstiges')) d.cats.push({id:'sonstiges', name:'Sonstiges', kw:''});
   d.history = d.history || []; d.sent = d.sent || {};
   return d;
@@ -379,11 +401,18 @@ function suggestCat(name){
 
 /* ---------- Mailtext ---------- */
 function linesFor(entries){
-  const groups = {};
-  for (const e of entries){
-    const a = art(e.aid); if (!a) continue;
-    (groups[a.cat] = groups[a.cat] || []).push({a, q:e.qty});
+  const rows = entries.map(e => ({a:art(e.aid), q:e.qty})).filter(x => x.a);
+  const out = [];
+  for (const ar of AREA_KEYS){
+    const rs = rows.filter(x => aId(x.a) === ar); if (!rs.length) continue;
+    out.push('--- ' + areaName(ar, false).toUpperCase() + ' ---', '');
+    out.push(...catLines(rs));
   }
+  return out;
+}
+function catLines(rows){
+  const groups = {};
+  for (const x of rows) (groups[x.a.cat] = groups[x.a.cat] || []).push(x);
   const out = [];
   for (const c of data.cats){
     const g = groups[c.id]; if (!g) continue;
@@ -478,29 +507,41 @@ function tileHTML(a, fav){
   const on = onLists(a.id);
   const pills = Object.entries(on).map(([s,q]) => `<span class="pill ${LISTS[s].cls}">${LISTS[s].name.split(' ')[0]} ${q}</span>`).join('');
   const dot = a.store ? `<span class="dot ${a.store==='hamberger'?'h':'k'}"></span>` : '';
-  return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
+  return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${fav && areaF==='all' ? esc((AREAS.find(x => x.id === aId(a))||{icon:'⚠︎'}).icon)+' ' : ''}${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
 }
 function renderOrder(){
   const q = norm(query).trim(), qv = normVi(query).trim();
-  let list = data.articles.slice();
+  if (areaF !== 'all' && !data.articles.some(a => aId(a) === areaF) && !AREAS.some(x => x.id === areaF)) areaF = 'all';
+  const inF = a => areaF === 'all' || q || aId(a) === areaF;
+  const cnt = id => data.articles.filter(a => aId(a) === id).length;
+  const fb = (id, label, n, cls) => `<button class="${areaF===id?'on':''} ${cls||''}" onclick="setArea('${id}')">${label}<span class="n">${n}</span></button>`;
+  const noArea = cnt('');
+  const fold = `<div class="fold">${fb('all','Alle',data.articles.length)}${AREAS.map(x => fb(x.id, x.icon+' '+x.name+(x.sub?' <small>'+x.sub+'</small>':''), cnt(x.id))).join('')}${noArea?fb('','⚠︎ Ohne Ordner',noArea,'no'):''}</div>`;
+  let list = data.articles.filter(inF);
   if (q) list = list.filter(a => norm(a.name).includes(q) || (a.vi && normVi(a.vi).includes(qv)) || norm(a.nr).includes(q) || norm(cat(a.cat).name).includes(q));
-  let h = bannerHTML() + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
+  let h = bannerHTML() + fold + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
     <button class="btn" onclick="openEdit(null, query)">＋ Neuer Artikel</button></div>`;
   if (!data.articles.length){
     return h + `<div class="empty"><p style="font-size:20px">Noch keine Artikel angelegt.</p><p>Tippe auf <b>＋ Neuer Artikel</b> – die Kategorie wird automatisch vorgeschlagen.</p></div>`;
   }
   if (!q){
-    const favs = data.articles.filter(a => a.count > 0).sort((x,y) => (y.count - x.count) || ((y.lastUsed||0)-(x.lastUsed||0))).slice(0, 12);
+    const favs = list.filter(a => a.count > 0).sort((x,y) => (y.count - x.count) || ((y.lastUsed||0)-(x.lastUsed||0))).slice(0, 12);
     if (favs.length) h += `<h2 class="cat">★ Häufig bestellt</h2><div class="grid">${favs.map(a => tileHTML(a,true)).join('')}</div>`;
   }
   let any = false;
-  for (const c of data.cats){
-    const items = list.filter(a => (cat(a.cat).id) === c.id).sort((x,y) => ((y.count||0)-(x.count||0)) || x.name.localeCompare(y.name,'de'));
-    if (!items.length) continue;
-    any = true;
-    h += `<h2 class="cat">${esc(c.name)} <span class="c">(${items.length})</span></h2><div class="grid">${items.map(a => tileHTML(a)).join('')}</div>`;
+  const shown = (areaF === 'all' || q) ? AREA_KEYS : [areaF];
+  for (const ar of shown){
+    const inA = list.filter(a => aId(a) === ar); if (!inA.length) continue;
+    if (shown.length > 1) h += `<h2 class="area">${esc(areaName(ar))}</h2>`;
+    for (const c of data.cats){
+      const items = inA.filter(a => (cat(a.cat).id) === c.id).sort((x,y) => ((y.count||0)-(x.count||0)) || x.name.localeCompare(y.name,'de'));
+      if (!items.length) continue;
+      any = true;
+      h += `<h2 class="cat">${esc(c.name)} <span class="c">(${items.length})</span></h2><div class="grid">${items.map(a => tileHTML(a)).join('')}</div>`;
+    }
   }
-  if (!any) h += `<div class="empty">Nichts gefunden für „${esc(query)}“.<br><br><button class="btn" onclick="openEdit(null, query)">„${esc(query)}“ als neuen Artikel anlegen</button></div>`;
+  if (!any && !q) h += `<div class="empty">Im Ordner ${esc(areaName(areaF))} gibt es noch keine Artikel.<br><br><button class="btn" onclick="openEdit(null, '')">＋ Neuer Artikel</button></div>`;
+  else if (!any) h += `<div class="empty">Nichts gefunden für „${esc(query)}“.<br><br><button class="btn" onclick="openEdit(null, query)">„${esc(query)}“ als neuen Artikel anlegen</button></div>`;
   return h;
 }
 function renderMainOnly(){
@@ -519,7 +560,7 @@ function openOrder(aid){
   const btn = (s, label) => `<button class="btn ${LISTS[s].cls} ${a.store===s?'def':''}" onclick="addToList('${aid}','${s}',mQty);closeModal();render()">${label}</button>`;
   $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
     <h3>${esc(a.name)}</h3>${a.vi?`<div class="vi" style="font-size:18px">${esc(a.vi)}</div>`:''}
-    <div class="sub">${a.nr?'Bestellnr. <b>'+esc(a.nr)+'</b> · ':''}${esc(cat(a.cat).name)} · Maß: <b>${esc(a.unit)}</b>${onTxt?`<br><span style="color:var(--ink)">Schon drauf: ${esc(onTxt)}</span>`:''}</div>
+    <div class="sub">${a.nr?'Bestellnr. <b>'+esc(a.nr)+'</b> · ':''}${esc(areaName(aId(a)))} · ${esc(cat(a.cat).name)} · Maß: <b>${esc(a.unit)}</b>${onTxt?`<br><span style="color:var(--ink)">Schon drauf: ${esc(onTxt)}</span>`:''}</div>
     <div class="step">
       <button onclick="chg(-10)">−10</button><button onclick="chg(-5)">−5</button><button onclick="chg(-1)">−1</button>
       <div class="v"><b id="mq">${mQty}</b><small id="mu">${esc(unitLabel(a.unit,mQty))}</small></div>
@@ -541,7 +582,8 @@ function closeModal(){ $('#modal').innerHTML = ''; }
 let ed = null;
 function openEdit(aid, preset){
   const a = aid ? art(aid) : null;
-  ed = a ? Object.assign({nr:'', vi:''}, a) : {id:null, name:(preset||'').trim(), nr:'', vi:'', cat:null, unit:'Stück', store:'', by:''};
+  ed = a ? Object.assign({nr:'', vi:''}, a) : {id:null, name:(preset||'').trim(), nr:'', vi:'', cat:null, unit:'Stück', store:'', by:'', area:(AREAS.some(x => x.id === areaF) ? areaF : '')};
+  if (a) ed.area = aId(a);
   ed.catManual = !!a;
   ed.viManual = !!(a && a.vi);
   if (!ed.cat) ed.cat = suggestCat(ed.name);
@@ -553,6 +595,7 @@ function openEdit(aid, preset){
 function drawEdit(){
   const isNew = !ed.id;
   const cats = data.cats.map(c => `<button class="${ed.cat===c.id?'on':''} ${ed.sugg===c.id && ed.cat!==c.id?'sg':''}" onclick="ed.cat='${c.id}';ed.catManual=true;drawEdit()">${esc(c.name)}</button>`).join('');
+  const areas = AREAS.map(x => `<button class="${ed.area===x.id?'on':''} " onclick="ed.area='${x.id}';drawEdit()">${x.icon} ${x.name}${x.sub?' <small>('+x.sub+')</small>':''}</button>`).join('');
   const units = UNITS.map(u => `<button class="${ed.unit===u?'on':''}" onclick="ed.unit='${u}';drawEdit()">${u}</button>`).join('');
   const stores = [['hamberger','Hamberger'],['kaufland','Kaufland'],['','Keiner / anderer Laden']].map(([v,l]) => `<button class="${ed.store===v?'on':''}" onclick="ed.store='${v}';drawEdit()">${l}</button>`).join('');
   $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
@@ -560,6 +603,9 @@ function drawEdit(){
     <label class="f">Name</label>
     <input id="en" class="in" value="${esc(ed.name)}" placeholder="z. B. Tomaten, Reisnudeln, To-go-Boxen" oninput="edName(this.value)" autocomplete="off">
     <div id="dup" class="hint"></div>
+    <label class="f">Ordner</label>
+    <div class="seg big">${areas}</div>
+    ${ed.area ? '' : '<div class="hint" style="color:#b3261e">Bitte auswählen: Küche oder Service.</div>'}
     <label class="f">Vietnamesisch</label>
     <div style="display:flex;gap:8px"><input id="evi" class="in" value="${esc(ed.vi||'')}" placeholder="wird automatisch übersetzt …" oninput="ed.vi=this.value;ed.viManual=!!this.value.trim()" autocomplete="off"><button class="btn sec" title="Neu übersetzen" onclick="autoVi(true)">↻</button></div>
     <div id="vist" class="hint"></div>
@@ -603,14 +649,15 @@ function checkDup(){
 function saveEdit(){
   const name = ed.name.trim();
   if (!name){ toast('Bitte einen Namen eingeben'); return; }
+  if (!AREAS.some(x => x.id === ed.area)){ toast('Bitte Ordner wählen: Küche oder Service'); return; }
   const n = norm(name);
   if (data.articles.find(a => a.id !== ed.id && norm(a.name) === n)){ toast('Diesen Artikel gibt es schon'); return; }
   if (ed.id){
     const a = art(ed.id);
-    Object.assign(a, {name, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim()});
+    Object.assign(a, {name, area:ed.area, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim()});
     save(); closeModal(); render(); toast('Gespeichert'); fillVi(a);
   } else {
-    const a = {id:uid(), name, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
+    const a = {id:uid(), name, area:ed.area, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
     data.articles.push(a);
     save(); query=''; render(); openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen'); fillVi(a);
   }
@@ -638,8 +685,12 @@ function renderList(store){
     <button class="btn sec" onclick="showText('${sendStore}')">Mail ansehen</button>
     <button class="btn ${LISTS[sendStore].cls}" ${canSend?'':'disabled'} onclick="sendNow('${sendStore}')">Jetzt senden${store==='sonstiges'?' (mit Kaufland)':''}</button></div>`;
   if (!L.length) return h + `<div class="empty">Liste ist leer.<br><br><button class="btn" onclick="go('order')">Artikel hinzufügen</button></div>`;
+  const rowsAll = L.map(e => ({e, a:art(e.aid)})).filter(x => x.a);
+  for (const ar of AREA_KEYS){
+  const rs = rowsAll.filter(x => aId(x.a) === ar); if (!rs.length) continue;
+  h += `<h2 class="area">${esc(areaName(ar))}</h2>`;
   const groups = {};
-  L.forEach(e => { const a = art(e.aid); if (!a) return; (groups[a.cat] = groups[a.cat] || []).push({e, a}); });
+  rs.forEach(x => (groups[x.a.cat] = groups[x.a.cat] || []).push(x));
   for (const c of data.cats){
     const g = groups[c.id]; if (!g) continue;
     g.sort((x,y) => x.a.name.localeCompare(y.a.name,'de'));
@@ -650,6 +701,7 @@ function renderList(store){
         <div class="mini"><button onclick="qty('${store}','${a.id}',-1)">−</button><span>${e.qty} ${esc(unitLabel(a.unit,e.qty))}</span><button onclick="qty('${store}','${a.id}',1)">+</button></div>
         <button class="x" title="Entfernen" onclick="removeEntry('${store}','${a.id}')">✕</button></div>`;
     }
+  }
   }
   h += `<div style="margin-top:20px;text-align:right"><button class="btn danger" onclick="clearList('${store}')">Liste leeren</button></div>`;
   return h;
