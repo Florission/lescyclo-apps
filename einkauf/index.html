@@ -277,6 +277,19 @@ async function refresh(force){
   } catch(e){ setSync('err', e.message === 'Failed to fetch' ? 'offline' : e.message); }
 }
 
+/* ---------- 🔄 Aktualisieren: Daten von GitHub holen + neueste App-Version laden ---------- */
+async function appUpdate(){
+  const b = $('#updbtn'); if (b){ b.disabled = true; b.textContent = '⏳'; }
+  try { const r = await fetch('icon.png?check=' + Date.now(), {cache:'no-store'}); if (!r.ok) throw new Error(); }
+  catch(e){ toast('⚠︎ Keine Internetverbindung – nichts geändert'); if (b){ b.disabled = false; b.textContent = '🔄'; } return; }
+  if (connected()){
+    try { await refresh(true); } catch(e){}
+    // laufendes Speichern abwarten (max. 10 s), damit nichts verloren geht
+    for (let i = 0; i < 50 && sync.busy; i++) await new Promise(r => setTimeout(r, 200));
+  }
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+
 /* ---------- storage ---------- */
 function writeLocal(){ lsSet(LS_DATA, JSON.stringify(data)); }
 function load(){
@@ -455,7 +468,8 @@ function renderHeader(){
     + tab('hamberger','Hamberger','h',n('hamberger'))
     + tab('kaufland','Kaufland','k',n('kaufland'))
     + tab('sonstiges','Andere Läden','o',n('sonstiges'))
-    + `<span class="sp"></span><span id="syncst" class="sync ${sync.state==='err'?'err':''}">${esc(syncLabel())}</span>` + tab('settings','⚙︎');
+    + `<span class="sp"></span><span id="syncst" class="sync ${sync.state==='err'?'err':''}">${esc(syncLabel())}</span>`
+    + `<button class="tab" id="updbtn" title="Daten und App aktualisieren" onclick="appUpdate()">🔄</button>` + tab('settings','⚙︎');
 }
 function go(v){ view = v; render(); window.scrollTo(0,0); }
 
