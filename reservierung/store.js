@@ -139,8 +139,9 @@
     ov.innerHTML = `<div class="lc-dlg"><h3>Abgleich zwischen Geräten</h3>
       <p>Daten werden über dein privates GitHub-Repo zwischen Handy, iPad und Tablet abgeglichen (automatisch alle 20 Sek. und nach jeder Änderung).</p>
       ${on ? `<p><b>✓ Verbunden mit ${c.repo.replace(/[<>&"]/g, '')}</b></p>
-        <p>Anderes Gerät verbinden: Code kopieren und dort einfügen.</p>
-        <div class="lc-row"><button type="button" data-a="copy">Verbindungscode kopieren</button><button type="button" data-a="off" class="lc-sec">Trennen</button></div><hr>` : ''}
+        <p><b>Handy verbinden:</b> diesen QR-Code mit der Handy-Kamera scannen.</p>
+        <div class="lc-qr">QR-Code wird erstellt …</div>
+        <div class="lc-row"><button type="button" data-a="copy" class="lc-sec">Code stattdessen kopieren</button><button type="button" data-a="off" class="lc-sec">Trennen</button></div><hr>` : ''}
       <label>Verbindungscode <small>(vom anderen Gerät)</small></label><input data-f="code" placeholder="LC1:…" autocomplete="off">
       <p class="lc-or">– oder –</p>
       <label>Repo</label><input data-f="repo" placeholder="Florission/…" value="${on ? c.repo.replace(/"/g, '') : ''}" autocomplete="off">
@@ -169,6 +170,16 @@
       }
     });
     document.body.appendChild(ov);
+    if (on) showQR(q('.lc-qr'), code);
+  }
+  // QR-Code mit Link zur Verbinden-Seite (der Zugang steht nur im #-Teil und wird nie an einen Server geschickt)
+  function showQR(el, code) {
+    const url = new URL('../verbinden.html', location.href).href + '#' + encodeURIComponent(code);
+    const draw = () => { try { el.innerHTML = window.LCQR(url, 260); } catch (e) { el.textContent = 'QR-Code nicht möglich – Code kopieren.'; } };
+    if (window.LCQR) return draw();
+    const sc = document.createElement('script'); sc.src = '../qr.js';
+    sc.onload = draw; sc.onerror = () => { el.textContent = 'QR-Code braucht Internet – Code kopieren.'; };
+    document.head.appendChild(sc);
   }
 
   // 🔄-Button: abgleichen + neueste App-Version aus dem Netz laden (gespeicherte Daten bleiben erhalten)
@@ -208,7 +219,7 @@
       + '.lc-dlg h3{margin:0 0 8px;font-size:19px}.lc-dlg p{margin:6px 0;color:#4a554e}.lc-dlg label{display:block;margin:10px 0 4px;font-weight:600}'
       + '.lc-dlg input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;border:1px solid #cfd6cf;border-radius:10px}'
       + '.lc-dlg .lc-row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}.lc-dlg button{font:inherit;padding:10px 14px;border-radius:10px;border:0;background:#2f6f4f;color:#fff;cursor:pointer}'
-      + '.lc-dlg button.lc-sec{background:#e7ebe6;color:#1d2420}.lc-dlg .lc-or{text-align:center;color:#8a948d;font-size:13px}.lc-dlg .lc-m{min-height:1.2em;font-weight:600}.lc-dlg hr{border:0;border-top:1px solid #e2e6e1;margin:14px 0}';
+      + '.lc-dlg button.lc-sec{background:#e7ebe6;color:#1d2420}.lc-dlg .lc-or{text-align:center;color:#8a948d;font-size:13px}.lc-dlg .lc-m{min-height:1.2em;font-weight:600}.lc-dlg hr{border:0;border-top:1px solid #e2e6e1;margin:14px 0}.lc-qr{display:flex;justify-content:center;padding:8px 0;color:#8a948d;font-size:13px}.lc-qr svg{max-width:100%;height:auto}';
     document.head.appendChild(st);
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'lc-upd'; b.textContent = '🔄';
@@ -248,7 +259,7 @@
   const call = (fn, ...args) => setTimeout(() => { if (typeof window[fn] === 'function') window[fn](...args); }, 0);
   const clean = (name) => String(name).replace(/[^a-z0-9_-]/g, '');
 
-  window.LC = { ls, deliver, pickFile, call, appUpdate, setupSync, syncNow, mergeVal,
+  window.LC = { ls, deliver, pickFile, call, appUpdate, setupSync, syncNow, mergeVal, showQR,
     kv: {
       load: (name) => ls.get('f_' + clean(name)) || '',
       save: (name, data) => {

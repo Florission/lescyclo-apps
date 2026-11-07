@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Le's Cyclo – Gerät verbinden</title>
+<style>
+  body{margin:0;font:17px/1.45 -apple-system,system-ui,sans-serif;background:#f3f5f1;color:#1d2420;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+  .box{background:#fff;border-radius:18px;padding:24px;max-width:420px;width:100%;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  h1{font-size:22px;margin:0 0 10px}
+  p{margin:8px 0;color:#4a554e}
+  .ok{color:#2f6f4f}.err{color:#b3261e}
+  a.btn{display:block;text-align:center;margin-top:10px;padding:14px;border-radius:12px;background:#2f6f4f;color:#fff;text-decoration:none;font-weight:600}
+  a.sec{background:#e7ebe6;color:#1d2420}
+</style>
+</head>
+<body>
+<div class="box" id="box"></div>
+<script>
+(function () {
+  const box = document.getElementById('box');
+  const raw = decodeURIComponent((location.hash || '').slice(1));
+  // Code sofort aus der Adresszeile/History entfernen
+  if (location.hash) history.replaceState(null, '', location.pathname);
+  let o = null;
+  try { o = JSON.parse(atob(raw.replace(/^LC1:/, ''))); } catch (e) {}
+  const links = '<a class="btn" href="reservierung/">Reservierung öffnen</a><a class="btn" href="bestellbon/">Bestellbon öffnen</a><a class="btn sec" href="einkauf/">Einkauf öffnen</a>';
+  if (o && /^[\w.-]+\/[\w.-]+$/.test(o.repo || '') && o.token) {
+    try {
+      localStorage.setItem('lescyclo_einkauf_sync', JSON.stringify({ repo: o.repo, token: o.token }));
+      box.innerHTML = '<h1 class="ok">✓ Gerät verbunden</h1><p>Reservierung, Bestellbon und Einkauf gleichen sich auf diesem Gerät jetzt automatisch ab.</p>'
+        + '<p>Falls die Apps schon auf dem Startbildschirm sind: einmal schließen und neu öffnen. Sonst unten öffnen und über ⋮ → „Zum Startbildschirm hinzufügen“ installieren.</p>' + links;
+      return;
+    } catch (e) {}
+  }
+  box.innerHTML = '<h1 class="err">Verbindung fehlgeschlagen</h1><p>Der QR-Code ist ungültig oder unvollständig. Am iPad in der App auf „✓ abgeglichen …“ tippen und den QR-Code erneut scannen.</p>' + links;
+})();
+</script>
+</body>
+</html>

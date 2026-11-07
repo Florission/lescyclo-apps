@@ -709,7 +709,7 @@ function renderSettings(){
       <div><label class="f">GitHub-Repo</label><input id="cfgrepo" class="in" value="${esc(c.repo || 'Florission/einkauf-daten')}" autocomplete="off"></div>
       <div><label class="f">Zugangs-Token</label><input id="cfgtok" class="in" type="password" value="${esc(c.token || '')}" placeholder="github_pat_…" autocomplete="off"></div>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="saveCfg()">Verbinden</button>${connected()?'<button class="btn sec" onclick="testMail()">Testmail senden</button><button class="btn sec" onclick="copyConnCode()">Verbindungscode kopieren</button>':''}</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="saveCfg()">Verbinden</button>${connected()?'<button class="btn sec" onclick="testMail()">Testmail senden</button><button class="btn" onclick="showConnQR()">📱 Handy verbinden (QR-Code)</button><button class="btn sec" onclick="copyConnCode()">Verbindungscode kopieren</button>':''}</div>
     <div class="hint">Status: ${esc(syncLabel())}. Das Token wird nur auf diesem Gerät gespeichert. Auf jedem Gerät, das die App nutzt, einmal eintragen.</div></div>
     <h2 class="cat">Empfänger</h2>
     ${rec('kaufland','Kauflandliste + Andere Läden → an')}
@@ -735,6 +735,23 @@ function renderSettings(){
     <div class="hint" style="text-align:center;margin-top:20px">${data.articles.length} Artikel · ${data.cats.length} Kategorien</div>`;
 }
 // Code für Reservierung/Bestellbon auf anderen Geräten (dort beim „Abgleich einrichten“ einfügen)
+function showConnQR(){
+  const c = cfg(), code = 'LC1:' + btoa(JSON.stringify({repo:c.repo, token:c.token}));
+  const url = new URL('../verbinden.html', location.href).href + '#' + encodeURIComponent(code);
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = '<div style="background:#fff;color:#1d2420;border-radius:16px;padding:20px;max-width:360px;width:100%;text-align:center;font:16px/1.4 -apple-system,system-ui,sans-serif">'
+    + '<h3 style="margin:0 0 6px">Handy verbinden</h3><p style="margin:0 0 10px;color:#4a554e">Mit der Handy-Kamera scannen und den Link öffnen.</p>'
+    + '<div id="qrBox" style="display:flex;justify-content:center;min-height:120px;align-items:center;color:#8a948d">QR-Code wird erstellt …</div>'
+    + '<button class="btn sec" style="margin-top:12px">Schließen</button></div>';
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.tagName === 'BUTTON') ov.remove(); });
+  document.body.appendChild(ov);
+  const draw = () => { $('#qrBox').innerHTML = window.LCQR(url, 260); };
+  if (window.LCQR) return draw();
+  const sc = document.createElement('script'); sc.src = '../qr.js'; sc.onload = draw;
+  sc.onerror = () => { $('#qrBox').textContent = 'QR-Code braucht Internet.'; };
+  document.head.appendChild(sc);
+}
 async function copyConnCode(){
   const c = cfg(), code = 'LC1:' + btoa(JSON.stringify({repo:c.repo, token:c.token}));
   try { await navigator.clipboard.writeText(code); toast('✓ Verbindungscode kopiert'); }
