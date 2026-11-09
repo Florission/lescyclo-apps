@@ -120,6 +120,14 @@ summary{cursor:pointer;font-weight:600}
 .fold button.on .n{background:rgba(255,255,255,.2);color:#fff}
 h2.area{font-size:22px;margin:28px 4px 2px;padding-bottom:6px;border-bottom:2px solid var(--line)}
 .seg.big button{padding:14px 20px;font-size:18px}
+.mode{display:flex;background:rgba(255,255,255,.12);border-radius:12px;padding:3px;margin-right:6px;flex-shrink:0}
+.mode button{padding:8px 12px;border-radius:9px;color:#cfd8d2;font-weight:700;white-space:nowrap}
+.mode button.on{background:#fff;color:var(--top)}
+body.edit header{background:#7a4a12}
+body.edit .mode button.on{color:#7a4a12}
+.tile.ed{border-style:dashed}
+.tile .miss{color:#b3261e;font-size:12px;font-weight:600}
+.editinfo{background:#fff3e0;border:1px solid #f0c890;border-radius:var(--r);padding:12px 16px;margin-bottom:12px;color:#5c3a0e}
 .warn{background:#fdecea;border:1px solid #f1b8b0;border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
 </style>
 </head>
@@ -162,6 +170,8 @@ const DEFAULT_CATS = [
 ];
 
 let data = null;
+const LS_MODE = 'lescyclo_einkauf_mode';
+let mode = (function(){ try { return localStorage.getItem(LS_MODE) === 'edit' ? 'edit' : 'order'; } catch(e){ return 'order'; } })();
 let view = 'order';
 let query = '';
 
@@ -492,21 +502,39 @@ function checkReminderPopup(){
 function renderHeader(){
   const n = s => data.lists[s].length;
   const tab = (id, label, cls, cnt) => `<button class="tab ${cls||''} ${view===id?'on':''}" onclick="go('${id}')">${label}${cnt!=null?`<span class="n">${cnt}</span>`:''}</button>`;
-  $('#hdr').innerHTML = `<h1>🛒 Einkauf</h1>`
-    + tab('order','Bestellen')
-    + tab('hamberger','Hamberger','h',n('hamberger'))
-    + tab('kaufland','Kaufland','k',n('kaufland'))
-    + tab('sonstiges','Andere Läden','o',n('sonstiges'))
+  const sw = `<div class="mode"><button class="${mode==='order'?'on':''}" onclick="setMode('order')">🛒 Bestellen</button><button class="${mode==='edit'?'on':''}" onclick="setMode('edit')">✎ Bearbeiten</button></div>`;
+  const tabs = mode === 'order'
+    ? tab('order','Artikel')
+      + tab('hamberger','Hamberger','h',n('hamberger'))
+      + tab('kaufland','Kaufland','k',n('kaufland'))
+      + tab('sonstiges','Andere Läden','o',n('sonstiges'))
+    : tab('order','Artikel verwalten',null,data.articles.length)
+      + tab('settings','⚙︎ Einstellungen');
+  $('#hdr').innerHTML = `<h1>🛒 Einkauf</h1>` + sw + tabs
     + `<span class="sp"></span><span id="syncst" class="sync ${sync.state==='err'?'err':''}">${esc(syncLabel())}</span>`
-    + `<button class="tab" id="updbtn" title="Daten und App aktualisieren" onclick="appUpdate()">🔄</button>` + tab('settings','⚙︎');
+    + `<button class="tab" id="updbtn" title="Daten und App aktualisieren" onclick="appUpdate()">🔄</button>`;
 }
-function go(v){ view = v; render(); window.scrollTo(0,0); }
+function setMode(m){
+  if (m === mode) return;
+  mode = m; lsSet(LS_MODE, m); query = ''; closeModal();
+  view = 'order'; render(); window.scrollTo(0,0);
+}
+function go(v){
+  // Listen gehören zum Bestellmodus, Einstellungen zum Bearbeitungsmodus
+  if (LISTS[v] && mode !== 'order'){ mode = 'order'; lsSet(LS_MODE, mode); }
+  if (v === 'settings' && mode !== 'edit'){ mode = 'edit'; lsSet(LS_MODE, mode); }
+  view = v; render(); window.scrollTo(0,0);
+}
 
 /* ---------- order view ---------- */
 function tileHTML(a, fav){
   const on = onLists(a.id);
   const pills = Object.entries(on).map(([s,q]) => `<span class="pill ${LISTS[s].cls}">${LISTS[s].name.split(' ')[0]} ${q}</span>`).join('');
   const dot = a.store ? `<span class="dot ${a.store==='hamberger'?'h':'k'}"></span>` : '';
+  if (mode === 'edit'){
+    const miss = [!a.nr && 'Bestellnr. fehlt', !a.vi && 'Vietnamesisch fehlt'].filter(Boolean).join(' · ');
+    return `<button class="tile ed" onclick="openEdit('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${a.store?' · '+esc(LISTS[a.store].name):''}</small>${miss?`<span class="miss">⚠︎ ${miss}</span>`:''}</button>`;
+  }
   return `<button class="tile ${fav?'fav':''}" onclick="openOrder('${a.id}')">${dot}<b>${esc(a.name)}</b>${a.vi?`<span class="vi">${esc(a.vi)}</span>`:''}<small>${fav && areaF==='all' ? esc((AREAS.find(x => x.id === aId(a))||{icon:'⚠︎'}).icon)+' ' : ''}${a.nr?'Nr. '+esc(a.nr)+' · ':''}${esc(a.unit)}${fav?' · '+esc(cat(a.cat).name):''}</small><div class="bd">${pills}</div></button>`;
 }
 function renderOrder(){
@@ -519,12 +547,15 @@ function renderOrder(){
   const fold = `<div class="fold">${fb('all','Alle',data.articles.length)}${AREAS.map(x => fb(x.id, x.icon+' '+x.name+(x.sub?' <small>'+x.sub+'</small>':''), cnt(x.id))).join('')}${noArea?fb('','⚠︎ Ohne Ordner',noArea,'no'):''}</div>`;
   let list = data.articles.filter(inF);
   if (q) list = list.filter(a => norm(a.name).includes(q) || (a.vi && normVi(a.vi).includes(qv)) || norm(a.nr).includes(q) || norm(cat(a.cat).name).includes(q));
-  let h = bannerHTML() + fold + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
-    <button class="btn" onclick="openEdit(null, query)">＋ Neuer Artikel</button></div>`;
+  const E = mode === 'edit';
+  let h = (E ? `<div class="editinfo"><b>✎ Bearbeitungsmodus</b> – Artikel antippen zum Ändern oder Löschen. Zum Bestellen oben auf <b>🛒 Bestellen</b> wechseln.</div>` : bannerHTML())
+    + fold + `<div class="bar"><input id="q" class="search" type="search" placeholder="Artikel oder Bestellnummer suchen …" value="${esc(query)}" oninput="query=this.value;renderMainOnly()" autocomplete="off">
+    ${E ? `<button class="btn" onclick="openEdit(null, query)">＋ Neuer Artikel</button>` : ''}</div>`;
   if (!data.articles.length){
-    return h + `<div class="empty"><p style="font-size:20px">Noch keine Artikel angelegt.</p><p>Tippe auf <b>＋ Neuer Artikel</b> – die Kategorie wird automatisch vorgeschlagen.</p></div>`;
+    return h + (E ? `<div class="empty"><p style="font-size:20px">Noch keine Artikel angelegt.</p><p>Tippe auf <b>＋ Neuer Artikel</b> – die Kategorie wird automatisch vorgeschlagen.</p></div>`
+                  : `<div class="empty"><p style="font-size:20px">Noch keine Artikel angelegt.</p><button class="btn" onclick="setMode('edit')">✎ Zum Bearbeitungsmodus</button></div>`);
   }
-  if (!q){
+  if (!q && !E){
     const favs = list.filter(a => a.count > 0).sort((x,y) => (y.count - x.count) || ((y.lastUsed||0)-(x.lastUsed||0))).slice(0, 12);
     if (favs.length) h += `<h2 class="cat">★ Häufig bestellt</h2><div class="grid">${favs.map(a => tileHTML(a,true)).join('')}</div>`;
   }
@@ -540,7 +571,7 @@ function renderOrder(){
       h += `<h2 class="cat">${esc(c.name)} <span class="c">(${items.length})</span></h2><div class="grid">${items.map(a => tileHTML(a)).join('')}</div>`;
     }
   }
-  if (!any && !q) h += `<div class="empty">Im Ordner ${esc(areaName(areaF))} gibt es noch keine Artikel.<br><br><button class="btn" onclick="openEdit(null, '')">＋ Neuer Artikel</button></div>`;
+  if (!any && !q) h += `<div class="empty">Im Ordner ${esc(areaName(areaF))} gibt es noch keine Artikel.${E ? `<br><br><button class="btn" onclick="openEdit(null, '')">＋ Neuer Artikel</button>` : ''}</div>`;
   else if (!any) h += `<div class="empty">Nichts gefunden für „${esc(query)}“.<br><br><button class="btn" onclick="openEdit(null, query)">„${esc(query)}“ als neuen Artikel anlegen</button></div>`;
   return h;
 }
@@ -571,7 +602,7 @@ function openOrder(aid){
       ${btn('kaufland','Zu Kauflandliste hinzufügen')}
       ${btn('sonstiges','Anderer Laden (ohne Zuordnung)')}
     </div>
-    <div class="foot"><button class="lnk" onclick="openEdit('${aid}')">✎ Artikel bearbeiten</button><button class="btn sec" onclick="closeModal()">Abbrechen</button></div>
+    <div class="foot"><span></span><button class="btn sec" onclick="closeModal()">Abbrechen</button></div>
   </div></div>`;
   window._mUnit = a.unit;
 }
@@ -659,7 +690,10 @@ function saveEdit(){
   } else {
     const a = {id:uid(), name, area:ed.area, nr:String(ed.nr||'').trim(), vi:String(ed.vi||'').trim(), cat:ed.cat, unit:ed.unit, store:ed.store, by:(ed.by||'').trim(), count:0, created:Date.now()};
     data.articles.push(a);
-    save(); query=''; render(); openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen'); fillVi(a);
+    save(); query=''; render();
+    if (mode === 'order'){ openOrder(a.id); toast('Artikel angelegt – jetzt Menge wählen oder abbrechen'); }
+    else { closeModal(); toast('Artikel angelegt'); }
+    fillVi(a);
   }
 }
 function delArticle(id){
@@ -855,6 +889,9 @@ function importFile(f){
 
 /* ---------- render ---------- */
 function render(){
+  if (mode === 'order' && view === 'settings') view = 'order';
+  if (mode === 'edit' && LISTS[view]) view = 'order';
+  document.body.classList.toggle('edit', mode === 'edit');
   renderHeader();
   const m = $('#main');
   if (view === 'order') m.innerHTML = renderOrder();
