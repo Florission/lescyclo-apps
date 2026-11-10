@@ -140,20 +140,20 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tgrid button.busy.draft{background:var(--blue);color:#fff;border-style:solid;box-shadow:0 0 0 3px var(--warn)}
 .tgrid button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tgrid .tgH{grid-column:1/-1;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:4px}
-/* Tisch-Ansicht auf schmalen Geräten: Speisekarte / Rechnung umschalten */
+/* Tisch-Ansicht: Speisekarte und Rechnung immer zusammen auf einer Seite */
 .tSw{display:none}
 .tSwMore{display:none}
 @media (max-width:900px){
-  .tSw{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
-  .tSw button{flex:1;min-height:58px;font-size:17px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.1}
+  #tGrid{grid-template-columns:minmax(0,1fr) minmax(0,44%);gap:10px;margin-top:8px!important}
+  #tGrid>.panel{padding:10px}
+  #tGrid>.panel.sticky{position:sticky;top:6px;max-height:calc(100dvh - 12px);overflow:auto}
+}
+@media (max-width:600px){
+  #tGrid{grid-template-columns:1fr}
+  #tGrid>.panel.sticky{position:static;max-height:none;overflow:visible}
+  .tSw{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}
+  .tSw button{flex:1;min-height:50px;font-size:16px;padding:4px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.1}
   .tSw button small{font-family:var(--font-num);font-size:13px;font-weight:700}
-  .tSw button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
-  .tSw button .cnt{font-family:var(--font-num);font-weight:700}
-  #tGrid.showK>.panel.sticky{display:none}
-  #tGrid.showR>.panel:first-child{display:none}
-  #tGrid{margin-top:4px!important}
-  .sticky{position:static}
-  .tSwMore{display:block;border-style:dashed;color:var(--accent);font-weight:600}
 }
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
 .tSw button.bump{animation:bump .35s ease}
@@ -230,7 +230,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
       <h2 id="tTitle"></h2>
       <button id="tMove">Tisch wechseln</button>
     </div>
-    <div class="tSw" id="tSw"><button data-tp="karte">Speisekarte</button><button data-tp="rechnung">Rechnung</button></div>
+    <div class="tSw" id="tSw"><button data-tp="karte">↑ Speisekarte</button><button data-tp="rechnung">↓ Rechnung</button></div>
     <div class="grid" id="tGrid" style="margin-top:14px">
       <div class="panel">
         <div class="seg" id="cats"></div>
@@ -391,7 +391,7 @@ const OPT_PRINT={"Fleisch":"thit","Original":"thit","Hühnchen":"thit","vegan":"
 function printName(l,kitchen){const o=l.option?(OPT_PRINT[l.option]||l.option):"";
   const ex=kitchen?(l.extras||[]).map(n=>{const it=extrasList().find(i=>i.name===n);return " + "+(it&&it.cook?it.cook:n);}).join(""):exTxt(l);
   const nm=kitchen&&l.cat==="Extras"&&!l.extras?((extrasList().find(i=>i.name===l.name)||{}).cook||l.name):l.name;
-  return (l.nr?l.nr+". ":"")+nm+(l.variant?" "+l.variant:"")+(o?" · "+o:"")+ex;}
+  return nm+(l.variant?" "+l.variant:"")+(o?" · "+o:"")+ex;}
 
 /* Tische ↔ Bezeichnung „Tisch 21+22“ */
 function tablesOf(label){const m=String(label).match(/^Tisch\s+(\d+(?:\s*\+\s*\d+)*)$/i);return m?m[1].split("+").map(s=>s.trim()):[];}
@@ -417,11 +417,12 @@ window.onBack=()=>{
 let tPane="karte";
 function openTable(label){cur=label;gangSel=1;mode="order";noteOpen=-1;say("");
   tPane=(tabs[label]||draftOf(label).length)?"rechnung":"karte";show("tisch");}
-function setPane(p){tPane=p;updSw();window.scrollTo(0,0);}
+function setPane(p){tPane=p;updSw();
+  const el=p==="karte"?document.querySelector("#tGrid>.panel"):document.querySelector("#tGrid>.panel.sticky");
+  if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}
 document.querySelectorAll("#tSw button").forEach(b=>b.onclick=()=>setPane(b.dataset.tp));
 function updSw(bump){if(!cur)return;const t=tabs[cur],dr=draftOf(cur),n=(t?t.lines.reduce((a,l)=>a+l.qty,0):0)+dr.reduce((a,l)=>a+l.qty,0);
-  const g=$("tGrid");g.classList.toggle("showK",tPane==="karte");g.classList.toggle("showR",tPane==="rechnung");
-  const [bk,br]=document.querySelectorAll("#tSw button");bk.classList.toggle("on",tPane==="karte");br.classList.toggle("on",tPane==="rechnung");
+  const [bk,br]=document.querySelectorAll("#tSw button");
   const nn=dr.reduce((a,l)=>a+l.qty,0);
   br.innerHTML=`<span>${mode==="pay"?"Abrechnen":"Rechnung"}</span>`+(n?`<small>${n} Pos. · ${eur((t?total(t):0)+sumL(dr))}${nn?` · +${nn}`:""}</small>`:"");
   if(bump){br.classList.remove("bump");void br.offsetWidth;br.classList.add("bump");}}
@@ -788,19 +789,20 @@ function kitchenBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W
     bold(0);sz(0);nl();}
   n("=".repeat(W));nl();
   b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
-/* Getränkebon: separat, kleinere Schrift */
-function drinkBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2);
+/* Getränkebon: separat, gleiche Schriftgröße wie der Küchenbon */
+function drinkBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2),W3=Math.floor(W/3);
   const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
-  const sz=s=>b.push(GS,0x21,s),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a);
-  al(1);sz(0x01);bold(1);n("GETRÄNKE");nl();
-  sz(0x11);wrap(o.label,W2).forEach(x=>{n(x);nl();});
+  const sz=s=>b.push(GS,0x21,s),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a),inv=v=>b.push(GS,0x42,v?1:0);
+  al(1);sz(0x11);bold(1);n("GETRÄNKE");nl();
+  sz(0x22);wrap(o.label,W3).forEach(x=>{n(x);nl();});
   sz(0x00);bold(0);n(stamp(when));nl();
-  al(0);n("=".repeat(W));nl();
-  for(const l of o.lines){bold(1);
-    wrap(`${l.qty}x ${printName(l)}`,W-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});bold(0);
-    if(l.note)wrap(">> "+l.note,W-3).forEach(x=>{n("   "+x);nl();});}
+  al(0);n("=".repeat(W));nl();nl();
+  for(const l of o.lines){sz(0x11);bold(1);
+    wrap(`${l.qty}x ${printName(l)}`,W2-3).forEach((x,i)=>{n((i?"   ":"")+x);nl();});
+    if(l.note){inv(1);wrap(">> "+l.note,W2-2).forEach(x=>{n(" "+x+" ");nl();});inv(0);}
+    bold(0);sz(0);nl();}
   n("=".repeat(W));nl();
-  b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,5,GS,0x56,66,0);return b;}
+  b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
 /* Küchenbons (je Gang einer) + Getränkebon als ein Druckauftrag */
 function orderBytes(label,lines,when,called){const f=lines.filter(isFood),d=lines.filter(l=>!isFood(l));
   const c=called||[],gangs=[...new Set(f.map(gangOf))].sort((x,y)=>x-y),multi=gangs.length>1||gangs.some(g=>g>1),out=[];

@@ -152,6 +152,8 @@ const LISTS = {
   kaufland:{name:'Kaufland', long:'Kauflandliste', cls:'k'},
   sonstiges:{name:'Andere Läden', long:'Andere Läden', cls:'o'}
 };
+function storeTo(s){ const R = (data && data.settings && data.settings.recipients) || defaults().settings.recipients, r = R[s] || {};
+  return (s === 'hamberger' ? 'Hamberger' : 'Kaufland & andere Läden') + ' → ' + (r.name || '') + (r.email ? ' (' + r.email + ')' : ''); }
 const AREAS = [
   {id:'kueche', name:'Küche', icon:'🍳'},
   {id:'service', name:'Service', icon:'🍽️'}
@@ -209,7 +211,7 @@ function defaults(){
     settings: {
       recipients: {
         kaufland: {name:'Floris', email:'floris_van_bommel@yahoo.de'},
-        hamberger:{name:'Meine Frau', email:'thaithaole@googlemail.com'}
+        hamberger:{name:'Thai Thao', email:'thaithaole@googlemail.com'}
       },
       times: {remindH:'13:00', sendH:'15:00', remindK:'19:00', sendK:'21:00'},
       autoSend: true,
@@ -227,10 +229,12 @@ function fixup(d){
   d.settings = Object.assign(defaults().settings, d.settings || {});
   d.settings.recipients = Object.assign(defaults().settings.recipients, d.settings.recipients || {});
   for (const k of ['kaufland','hamberger']) d.settings.recipients[k] = Object.assign(defaults().settings.recipients[k], d.settings.recipients[k]);
+  if (d.settings.recipients.hamberger.name === 'Meine Frau') d.settings.recipients.hamberger.name = 'Thai Thao';
   d.settings.times = Object.assign(defaults().settings.times, d.settings.times || {});
   if (!Array.isArray(d.cats) || !d.cats.length) d.cats = JSON.parse(JSON.stringify(DEFAULT_CATS));
   if (!d.cats.find(c => c.id === 'lehmann')){ const i = d.cats.findIndex(c => c.id === 'getraenke'); d.cats.splice(i >= 0 ? i + 1 : Math.max(0, d.cats.length - 1), 0, {id:'lehmann', name:'Lehmann (Getränke)', kw:'lehmann'}); }
   (d.articles || []).forEach(a => { if (a.area === 'lehmann'){ a.cat = 'lehmann'; delete a.area; } });
+  (d.articles || []).forEach(a => { if (a.store !== 'hamberger' && a.store !== 'kaufland') a.store = 'kaufland'; });
   if (!d.cats.find(c => c.id === 'sonstiges')) d.cats.push({id:'sonstiges', name:'Sonstiges', kw:''});
   d.history = d.history || []; d.sent = d.sent || {};
   return d;
@@ -510,7 +514,7 @@ function renderHeader(){
     ? tab('order','Artikel')
       + tab('hamberger','Hamberger','h',n('hamberger'))
       + tab('kaufland','Kaufland','k',n('kaufland'))
-      + tab('sonstiges','Andere Läden','o',n('sonstiges'))
+      + (n('sonstiges') ? tab('sonstiges','Andere Läden','o',n('sonstiges')) : '')
     : tab('order','Artikel verwalten',null,data.articles.length)
       + tab('settings','⚙︎ Einstellungen');
   $('#hdr').innerHTML = `<h1>🛒 Einkauf</h1>` + sw + tabs
@@ -601,9 +605,9 @@ function openOrder(aid){
       <button onclick="chg(1)">+1</button><button onclick="chg(5)">+5</button><button onclick="chg(10)">+10</button>
     </div>
     <div class="acts">
-      ${btn('hamberger','Zu Hambergerliste hinzufügen')}
-      ${btn('kaufland','Zu Kauflandliste hinzufügen')}
-      ${btn('sonstiges','Anderer Laden (ohne Zuordnung)')}
+      ${LISTS[a.store] && a.store !== 'sonstiges'
+        ? `<div class="hint" style="text-align:center;font-size:15px">Geht an: <b>${esc(storeTo(a.store))}</b></div>` + btn(a.store, '＋ Auf die ' + LISTS[a.store].long)
+        : btn('hamberger','Zu Hambergerliste hinzufügen') + btn('kaufland','Zu Kauflandliste hinzufügen')}
     </div>
     <div class="foot"><span></span><button class="btn sec" onclick="closeModal()">Abbrechen</button></div>
   </div></div>`;
@@ -631,7 +635,7 @@ function drawEdit(){
   const cats = data.cats.map(c => `<button class="${ed.cat===c.id?'on':''} ${ed.sugg===c.id && ed.cat!==c.id?'sg':''}" onclick="ed.cat='${c.id}';ed.catManual=true;drawEdit()">${esc(c.name)}</button>`).join('');
   const areas = AREAS.map(x => `<button class="${ed.area===x.id?'on':''} " onclick="ed.area='${x.id}';drawEdit()">${x.icon} ${x.name}${x.sub?' <small>('+x.sub+')</small>':''}</button>`).join('');
   const units = UNITS.map(u => `<button class="${ed.unit===u?'on':''}" onclick="ed.unit='${u}';drawEdit()">${u}</button>`).join('');
-  const stores = [['hamberger','Hamberger'],['kaufland','Kaufland'],['','Keiner / anderer Laden']].map(([v,l]) => `<button class="${ed.store===v?'on':''}" onclick="ed.store='${v}';drawEdit()">${l}</button>`).join('');
+  const stores = ['kaufland','hamberger'].map(v => `<button class="${ed.store===v?'on':''}" onclick="ed.store='${v}';drawEdit()">${esc(storeTo(v))}</button>`).join('');
   $('#modal').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="md">
     <div class="edtop"><h3>${isNew ? 'Neuer Artikel' : 'Artikel bearbeiten'}</h3><button class="btn sec" onclick="closeModal()">Abbrechen</button><button class="btn" onclick="saveEdit()">💾 Speichern</button></div>
     <label class="f">Name</label>
@@ -650,9 +654,9 @@ function drawEdit(){
     <div class="seg">${cats}</div>
     <label class="f">Maß</label>
     <div class="seg">${units}</div>
-    <label class="f">Wird normalerweise gekauft bei</label>
-    <div class="seg">${stores}</div>
-    <div class="hint">Nur eine Markierung als Standard – beim Bestellen kann man trotzdem jede Liste wählen.</div>
+    <label class="f">Bestellung geht an</label>
+    <div class="seg big">${stores}</div>
+    ${ed.store === 'hamberger' || ed.store === 'kaufland' ? '<div class="hint">Beim Bestellen geht der Artikel automatisch auf diese Liste – man wählt nur noch die Menge.</div>' : '<div class="hint" style="color:#b3261e">Bitte auswählen, wohin die Bestellung geht.</div>'}
     <label class="f">Eingetragen von (optional)</label>
     <input class="in" value="${esc(ed.by||'')}" placeholder="Name" oninput="ed.by=this.value">
     <div class="foot">
@@ -683,6 +687,7 @@ function saveEdit(){
   const name = ed.name.trim();
   if (!name){ toast('Bitte einen Namen eingeben'); return; }
   if (!AREAS.some(x => x.id === ed.area)){ toast('Bitte Ordner wählen: Küche oder Service'); return; }
+  if (ed.store !== 'hamberger' && ed.store !== 'kaufland'){ toast('Bitte wählen, wohin die Bestellung geht: Kaufland & andere oder Hamberger'); return; }
   const n = norm(name);
   if (data.articles.find(a => a.id !== ed.id && norm(a.name) === n)){ toast('Diesen Artikel gibt es schon'); return; }
   if (ed.id){

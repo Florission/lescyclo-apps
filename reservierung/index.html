@@ -129,6 +129,8 @@ td.num{font-family:var(--font-num);text-align:right}
 .tbl.has.busy,.tbl.busy{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
 .tbl.has.pick{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .tbl .s{white-space:pre-line;line-height:1.15;text-align:center;overflow:hidden}
+input.miss{border:2px solid var(--danger);background:var(--danger-soft)}
+.fErr{color:var(--danger);font-size:14px;font-weight:700}
 </style>
 </head>
 <body>
@@ -165,9 +167,11 @@ td.num{font-family:var(--font-num);text-align:right}
           <label>Datum<input type="date" id="fDate" required></label>
           <label>Uhrzeit<input type="time" id="fTime" step="900" required></label>
         </div>
-        <label>Name<input id="fName" placeholder="Name des Gastes" required></label>
+        <label>Name *<input id="fName" placeholder="Name des Gastes"><span class="fErr" id="eName" hidden></span></label>
         <div class="sugg" id="sugg"></div>
-        <label>Telefon<input id="fPhone" type="tel" inputmode="tel" placeholder="optional"></label>
+        <label>Telefon *<input id="fPhone" type="tel" inputmode="tel" placeholder="Telefonnummer"></label>
+        <label>Kontakt-Notiz (wenn keine Telefonnummer)<input id="fContact" placeholder="z. B. E-Mail, Instagram, über Lisa erreichbar"><span class="fErr" id="eContact" hidden></span></label>
+        <div class="note" style="margin-top:-6px">* Name und Telefon <b>oder</b> Kontakt-Notiz sind Pflicht.</div>
         <div class="guestinfo" id="guestInfo" hidden></div>
         <div class="row2">
           <label>Personen
@@ -206,7 +210,7 @@ td.num{font-family:var(--font-num);text-align:right}
         <div id="planBox" hidden style="display:flex;flex-direction:column;gap:10px">
           <div class="head"><div class="seg" id="bookAreas"></div><div class="note" id="planCap"></div></div>
           <div class="plan" id="bookPlan"></div>
-          <div class="legend"><span><i></i>frei</span><span><i style="background:var(--accent)"></i>ausgewählt</span><span><i style="background:var(--danger-soft);border-color:var(--danger)"></i>belegt</span><span>Tisch antippen = für die Reservierung links auswählen</span></div>
+          <div class="legend"><span><i></i>frei</span><span><i style="background:var(--accent)"></i>ausgewählt</span><span><i style="background:var(--danger-soft);border-color:var(--danger)"></i>belegt</span><span>gestrichelte Linie = gemeinsame Reservierung</span></div>
         </div>
         <div class="list" id="dayList"></div>
       </section>
@@ -398,6 +402,7 @@ function renderDay(){
     if(r.tables.length)parts.push(`<span class="tag">${r.tables.map(esc).join(", ")}</span>`);
     if(r.highchair)parts.push(`<span class="tag">Kinderstuhl</span>`);
     if(r.phone)parts.push(`<span>${esc(r.phone)}</span>`);
+    if(r.contact)parts.push(`<span>Kontakt: ${esc(r.contact)}</span>`);
     if(r.note)parts.push(`<span>${esc(r.note)}</span>`);
     const g=guests.find(x=>x.id===r.guestId);if(g&&g.note)parts.push(`<span>Gast: ${esc(g.note)}</span>`);
     parts.push(`<span>${STATUS[r.status]}</span>`);
@@ -458,7 +463,7 @@ function suggest(){
   const m=guests.filter(g=>(q.length>=2&&g.name.toLowerCase().includes(q))||(ph.length>=5&&normPhone(g.phone).includes(ph))).slice(0,5);
   for(const g of m){const s=guestStats(g);const b=document.createElement("button");b.type="button";
     b.textContent=`${g.name}${g.phone?" · "+g.phone:""} · ${s.visits}× da${s.noshow?` · ${s.noshow}× No-Show`:""}`;
-    b.onclick=()=>{guestSel=g.id;$("fName").value=g.name;if(g.phone)$("fPhone").value=g.phone;box.textContent="";showGuestInfo();};
+    b.onclick=()=>{guestSel=g.id;$("fName").value=g.name;if(g.phone)$("fPhone").value=g.phone;if(g.contact)$("fContact").value=g.contact;box.textContent="";showGuestInfo();};
     box.append(b);}
 }
 function showGuestInfo(){const g=guests.find(x=>x.id===guestSel),el=$("guestInfo");
@@ -470,9 +475,11 @@ $("fPhone").oninput=()=>{suggest();};
 function resetForm(){editId=null;guestSel=null;high=false;selTables=[];
   $("form").reset();$("fDate").value=day;$("fTime").value="18:00";$("fPers").value=2;$("fStatus").value="bestaetigt";
   $("formTitle").textContent="Neue Reservierung";$("fCancel").hidden=true;$("fDelete").hidden=true;$("fDelete").textContent="Löschen";
-  $("sugg").textContent="";$("guestInfo").hidden=true;setHigh();renderTables();renderDay();}
+  $("sugg").textContent="";$("guestInfo").hidden=true;
+  ["fName","fPhone","fContact"].forEach(id=>$(id).classList.remove("miss"));$("eName").hidden=true;$("eContact").hidden=true;
+  setHigh();renderTables();renderDay();}
 function editRes(id){const r=res.find(x=>x.id===id);if(!r)return;editId=id;guestSel=r.guestId||null;high=!!r.highchair;selTables=[...r.tables];
-  $("fDate").value=r.date;$("fTime").value=r.time;$("fName").value=r.name;$("fPhone").value=r.phone||"";$("fPers").value=r.persons;
+  $("fDate").value=r.date;$("fTime").value=r.time;$("fName").value=r.name;$("fPhone").value=r.phone||"";$("fContact").value=r.contact||"";$("fPers").value=r.persons;
   $("fNote").value=r.note||"";$("fStatus").value=r.status;$("formTitle").textContent="Reservierung bearbeiten";
   $("fCancel").hidden=false;$("fDelete").hidden=false;$("fDelete").textContent="Löschen";$("sugg").textContent="";
   setHigh();showGuestInfo();renderTables();renderDay();say("");window.scrollTo({top:0,behavior:"smooth"});}
@@ -485,7 +492,14 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   const date=$("fDate").value,time=$("fTime").value,name=$("fName").value.trim(),phone=$("fPhone").value.trim(),
         persons=parseInt($("fPers").value);
   if(!date||!time)return say("Bitte Datum und Uhrzeit angeben.","err");
-  if(!name)return say("Bitte einen Namen eintragen.","err");
+  const contact=$("fContact").value.trim();
+  ["fName","fPhone","fContact"].forEach(id=>$(id).classList.remove("miss"));$("eName").hidden=true;$("eContact").hidden=true;
+  const miss=[];
+  if(!name){miss.push("Name");$("fName").classList.add("miss");$("eName").textContent="Name fehlt.";$("eName").hidden=false;}
+  if(!phone&&!contact){miss.push("Telefon oder Kontakt-Notiz");$("fPhone").classList.add("miss");$("fContact").classList.add("miss");
+    $("eContact").textContent="Telefonnummer oder Kontakt-Notiz fehlt – wie erreichen wir den Gast?";$("eContact").hidden=false;}
+  if(miss.length){(name?(phone?$("fContact"):$("fPhone")):$("fName")).focus();
+    return say("Nicht gespeichert – es fehlt: "+miss.join(" und ")+".","err");}
   if(!(persons>0))return say("Bitte die Personenzahl angeben.","err");
   if(!["storniert","noshow"].includes($("fStatus").value)){
     const busyNow=busyTables(date,time,editId,durFor(persons)), clash=selTables.filter(t=>busyNow[t]);
@@ -494,10 +508,10 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   let g=guests.find(x=>x.id===guestSel);
   if(!g&&phone)g=guests.find(x=>x.phone&&normPhone(x.phone)===normPhone(phone));
   if(!g&&!phone)g=guests.find(x=>!x.phone&&x.name.toLowerCase()===name.toLowerCase());
-  if(!g){g={id:uid(),name,phone,note:"",created:new Date().toISOString()};guests.push(g);}
-  else{g.name=name;if(phone)g.phone=phone;}
+  if(!g){g={id:uid(),name,phone,contact,note:"",created:new Date().toISOString()};guests.push(g);}
+  else{g.name=name;if(phone)g.phone=phone;if(contact)g.contact=contact;}
   const now=new Date().toISOString();
-  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,dur:durFor(persons),updated:now};
+  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,dur:durFor(persons),contact,updated:now};
   if(editId){Object.assign(res.find(r=>r.id===editId),data);}
   else res.push({id:uid(),created:now,...data});
   if(!persist())return;
@@ -802,6 +816,154 @@ function up(e){cleanup();const d=dg;dg=null;if(!d)return;
   if(editId===r.id)selTables=[...r.tables];
   renderTables();renderDay();toast(r.name+" verschoben: Tisch "+d.from+" → "+to,"");}
 
+renderTables();
+})();
+</script>
+<script>
+/* ---------- Großer Tischplan · Tisch antippen = Belegung sehen · Verschieben · Tischgruppen ---------- */
+(function(){
+const css=document.createElement("style");css.textContent=`
+#planBox{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#bookPlan{background-image:none;touch-action:pan-x pan-y;min-width:560px}
+#bookPlan .tbl{font-size:clamp(11px,1.9cqw,20px);border-width:3px}
+#bookPlan .tbl .n{font-size:1.25em}
+#bookPlan .tbl .rchip{font-size:.72em;padding:2px 4px}
+#bookPlan .grpSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+#bookPlan .tbl.grp{z-index:2}
+#tblInfo{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:10px}
+@media (min-width:700px){#tblInfo{align-items:center}}
+#tblInfo .tiBox{background:var(--bg);border-radius:16px;width:min(560px,100%);max-height:92dvh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#tblInfo .tiHead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#tblInfo .tiHead b{font-size:24px}
+#tblInfo .tiRes{border:2px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+#tblInfo .tiTime{font-family:var(--font-num);font-size:28px;font-weight:800;line-height:1}
+#tblInfo .tiWho{font-size:20px;font-weight:700}
+#tblInfo .tiGrp{display:inline-block;color:#fff;border-radius:8px;padding:3px 10px;font-weight:700;font-size:15px}
+#tblInfo .tiMeta{font-size:15px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+#tblInfo .tiBtns{display:flex;gap:8px;margin-top:4px}#tblInfo .tiBtns button{flex:1;min-height:52px;font-size:17px}
+#tblInfo .tiFree{font-size:18px;color:var(--muted);padding:6px 0}
+#tblInfo .tiNew{min-height:56px;font-size:18px}
+#mvBar{position:fixed;left:0;right:0;bottom:0;z-index:65;background:var(--bg);border-top:3px solid var(--accent);box-shadow:0 -6px 20px rgba(0,0,0,.25);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+#mvBar .mvTop{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+#mvBar .mvTop b{font-size:18px}
+#mvBar .mvRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#mvBar .mvRow button{min-height:50px;min-width:56px;font-size:16px;font-weight:700}
+#mvBar .mvT{font-family:var(--font-num);font-size:28px;font-weight:800;min-width:4.2em;text-align:center}
+#mvBar .mvTbl{font-size:17px;font-weight:700}
+#mvBar .mvWarn{color:var(--danger);font-weight:700;font-size:15px}
+#mvBar .mvAct{display:flex;gap:8px}#mvBar .mvAct button{flex:1;min-height:54px;font-size:17px}
+body.mvMode .rchip{pointer-events:none}
+body.mvMode #planBox{padding-bottom:230px}
+`;document.head.append(css);
+
+const COLORS=["#7c3aed","#0891b2","#db2777","#ea580c","#16a34a","#2563eb"];
+const drawerOpen=()=>{const d=$("resDrawer");return d&&!d.hidden;};
+const ofDay=(id,date)=>res.filter(r=>r.date===date&&active(r)&&r.tables.includes(id)).sort((a,b)=>a.time.localeCompare(b.time));
+const durTxt=d=>(d%60?Math.floor(d/60)+"½":d/60)+" Std.";
+let mv=null; /* {id,time,tables,first} */
+
+/* Plan auf die belegte Fläche zuschneiden → Tische deutlich größer */
+const _rbp2=renderBookPlan;
+renderBookPlan=function(busy){_rbp2(busy);if(rightMode!=="plan")return;enhance();};
+function enhance(){
+  const box=$("bookPlan"),list=cfg.tables.filter(x=>x.area===bookArea),els=[...box.querySelectorAll(":scope>.tbl")];
+  if(!list.length||els.length!==list.length)return;
+  const P=10,x0=Math.max(0,Math.min(...list.map(t=>t.x))-P),y0=Math.max(0,Math.min(...list.map(t=>t.y))-P),
+        x1=Math.max(...list.map(t=>t.x+t.w))+P,y1=Math.max(...list.map(t=>t.y+t.h))+P,bw=x1-x0,bh=y1-y0;
+  box.style.aspectRatio=bw+"/"+bh;
+  const ctr={};
+  list.forEach((t,i)=>{const el=els[i];el.style.left=(t.x-x0)/bw*100+"%";el.style.top=(t.y-y0)/bh*100+"%";
+    el.style.width=t.w/bw*100+"%";el.style.height=t.h/bh*100+"%";ctr[t.id]={x:t.x-x0+t.w/2,y:t.y-y0+t.h/2};});
+  const date=$("fDate").value;
+  /* Reservierungen über mehrere Tische: Linie + Farbe */
+  const groups=res.filter(r=>r.date===date&&active(r)&&r.tables.length>1).sort((a,b)=>a.time.localeCompare(b.time));
+  const col={};groups.forEach((r,i)=>col[r.id]=COLORS[i%COLORS.length]);
+  const svgNS="http://www.w3.org/2000/svg",svg=document.createElementNS(svgNS,"svg");
+  svg.setAttribute("class","grpSvg");svg.setAttribute("viewBox",`0 0 ${bw} ${bh}`);svg.setAttribute("preserveAspectRatio","none");
+  for(const r of groups){const pts=r.tables.map(id=>ctr[id]).filter(Boolean);
+    for(let i=1;i<pts.length;i++){const l=document.createElementNS(svgNS,"line");
+      l.setAttribute("x1",pts[i-1].x);l.setAttribute("y1",pts[i-1].y);l.setAttribute("x2",pts[i].x);l.setAttribute("y2",pts[i].y);
+      l.setAttribute("stroke",col[r.id]);l.setAttribute("stroke-width","6");l.setAttribute("stroke-linecap","round");
+      l.setAttribute("stroke-dasharray","2 10");l.setAttribute("vector-effect","non-scaling-stroke");l.setAttribute("opacity",".9");svg.append(l);}}
+  box.append(svg);
+  list.forEach((t,i)=>{const el=els[i];if(t.shape==="deko")return;
+    const g=groups.filter(r=>r.tables.includes(t.id));
+    if(g.length){el.classList.add("grp");el.style.boxShadow=g.map((r,k)=>`0 0 0 ${3+k*3}px ${col[r.id]}`).join(",");}
+    el.querySelectorAll(".rchip").forEach(c=>{const r=res.find(x=>x.id===c.dataset.id);if(!r)return;
+      if(r.tables.length>1){c.textContent+=" · "+r.tables.join("+");c.style.borderLeft="6px solid "+col[r.id];}
+      if(mv&&mv.id===r.id)c.classList.add("on");});
+    const orig=el.onclick;
+    el.onclick=e=>{if(e.target.closest(".rchip"))return;
+      if(mv)return mvTap(t.id);
+      if(drawerOpen())return orig&&orig(e);
+      openInfo(t.id,()=>orig&&orig({target:el}));};
+    if(mv){const r=res.find(x=>x.id===mv.id),b=busyTables(r.date,mv.time,r.id,durOf(r));
+      el.classList.remove("busy","pick","has");
+      if(b[t.id])el.classList.add("busy");if(mv.tables.includes(t.id))el.classList.add("pick");}
+  });
+}
+
+/* Tisch-Info: wann, wie viele Personen, mit welchen Tischen */
+let infoEl=null;
+function closeInfo(){if(infoEl){infoEl.remove();infoEl=null;}}
+function openInfo(id,onNew){closeInfo();const date=$("fDate").value,t=cfg.tables.find(x=>x.id===id)||{},list=ofDay(id,date);
+  infoEl=document.createElement("div");infoEl.id="tblInfo";
+  const bx=document.createElement("div");bx.className="tiBox";infoEl.append(bx);
+  infoEl.onclick=e=>{if(e.target===infoEl)closeInfo();};
+  bx.innerHTML=`<div class="tiHead"><b>Tisch ${esc(id)}</b><span class="note">${t.seats||"?"} Plätze · ${esc(short(date))}</span><button type="button" id="tiX" aria-label="Schließen">✕</button></div>`;
+  if(!list.length)bx.insertAdjacentHTML("beforeend",`<div class="tiFree">An diesem Tag nicht reserviert.</div>`);
+  const groups=res.filter(r=>r.date===date&&active(r)&&r.tables.length>1).sort((a,b)=>a.time.localeCompare(b.time));
+  for(const r of list){const c=document.createElement("div");c.className="tiRes";
+    const gi=groups.findIndex(x=>x.id===r.id),g=guests.find(x=>x.id===r.guestId);
+    const meta=[];
+    if(r.phone)meta.push("📞 "+esc(r.phone));if(r.contact)meta.push("✉ "+esc(r.contact));
+    if(r.highchair)meta.push("Kinderstuhl");if(r.note)meta.push("Notiz: "+esc(r.note));
+    if(g&&g.note)meta.push("Gast: "+esc(g.note));meta.push(STATUS[r.status]);
+    c.innerHTML=`<div class="tiTime">${esc(r.time)}–${esc(endOf(r.time,durOf(r)))} <span class="note" style="font-size:14px">(${durTxt(durOf(r))})</span></div>
+      <div class="tiWho">${esc(r.name)} · ${r.persons} ${r.persons===1?"Person":"Personen"}</div>
+      ${r.tables.length>1?`<div><span class="tiGrp" style="background:${COLORS[gi%COLORS.length]}">Tische ${r.tables.map(esc).join(" + ")} zusammen</span></div>`:""}
+      <div class="tiMeta">${meta.map(x=>`<span>${x}</span>`).join("")}</div>
+      <div class="tiBtns"><button type="button" data-a="mv" class="primary">Verschieben</button><button type="button" data-a="ed">Ändern</button></div>`;
+    c.querySelector('[data-a="mv"]').onclick=()=>{closeInfo();startMove(r.id);};
+    c.querySelector('[data-a="ed"]').onclick=()=>{closeInfo();editRes(r.id);};
+    bx.append(c);}
+  const nb=document.createElement("button");nb.type="button";nb.className="tiNew";nb.textContent="+ Neue Reservierung an Tisch "+id;
+  nb.onclick=()=>{closeInfo();onNew();};bx.append(nb);
+  document.body.append(infoEl);$("tiX").onclick=closeInfo;}
+
+/* Verschieben: Uhrzeit ändern und/oder andere Tische antippen */
+let bar=null;
+function startMove(id){const r=res.find(x=>x.id===id);if(!r)return;
+  if(drawerOpen())resetForm();
+  mv={id,time:r.time,tables:[...r.tables],first:true};document.body.classList.add("mvMode");
+  if($("fDate").value!==r.date){day=r.date;$("fDate").value=r.date;renderDay();}
+  bar=document.createElement("div");bar.id="mvBar";document.body.append(bar);drawBar();renderTables();}
+function stopMove(){mv=null;document.body.classList.remove("mvMode");if(bar){bar.remove();bar=null;}renderTables();renderDay();}
+function conflicts(){const r=res.find(x=>x.id===mv.id),b=busyTables(r.date,mv.time,r.id,durOf(r));return mv.tables.filter(t=>b[t]).map(t=>"Tisch "+t+": "+b[t]);}
+function drawBar(){const r=res.find(x=>x.id===mv.id);if(!r)return stopMove();const cf=conflicts();
+  const seats=cfg.tables.filter(t=>mv.tables.includes(t.id)).reduce((s,t)=>s+(t.seats||0),0);
+  bar.innerHTML=`<div class="mvTop"><b>Verschieben: ${esc(r.name)} · ${r.persons} P.</b><span class="note">Ziel-Tisch(e) im Plan antippen</span></div>
+    <div class="mvRow"><button type="button" data-m="-30">−30</button><button type="button" data-m="-15">−15</button>
+      <span class="mvT">${esc(mv.time)}</span><button type="button" data-m="15">+15</button><button type="button" data-m="30">+30</button>
+      <span class="note">bis ${esc(endOf(mv.time,durOf(r)))}</span></div>
+    <div class="mvTbl">${mv.tables.length?"Tisch "+mv.tables.map(esc).join(" + ")+` (${seats} Plätze)`:"Kein Tisch gewählt"}${mv.time!==r.time||mv.tables.join()!==r.tables.join()?` <span class="note">vorher ${esc(r.time)}, Tisch ${r.tables.map(esc).join("+")||"–"}</span>`:""}</div>
+    ${cf.length?`<div class="mvWarn">Belegt: ${cf.map(esc).join("; ")}</div>`:""}
+    ${seats&&r.persons>seats?`<div class="mvWarn">Nur ${seats} Plätze für ${r.persons} Personen.</div>`:""}
+    <div class="mvAct"><button type="button" id="mvNo">Abbrechen</button><button type="button" id="mvOk" class="primary"${cf.length||!mv.tables.length?" disabled":""}>Übernehmen</button></div>`;
+  bar.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{let m=(mins(mv.time)+parseInt(b.dataset.m)+1440)%1440;
+    mv.time=pad(Math.floor(m/60))+":"+pad(m%60);drawBar();renderTables();});
+  $("mvNo").onclick=stopMove;
+  $("mvOk").onclick=()=>{if(conflicts().length||!mv.tables.length)return;
+    const old=r.time+" Tisch "+r.tables.join("+");r.time=mv.time;r.tables=[...mv.tables];r.updated=new Date().toISOString();
+    if(!persist())return;const msg=`${r.name} verschoben: ${old} → ${r.time} Tisch ${r.tables.join("+")}`;stopMove();say(msg,"ok");};}
+function mvTap(id){
+  if(mv.first){mv.tables=[id];mv.first=false;}
+  else mv.tables=mv.tables.includes(id)?mv.tables.filter(x=>x!==id):[...mv.tables,id];
+  drawBar();renderTables();}
+
+const _back=window.onBack;window.onBack=()=>{if(infoEl)return closeInfo();if(mv)return stopMove();return _back&&_back();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(infoEl)closeInfo();else if(mv)stopMove();}});
+const h=$("planHint");if(h)h.textContent="Tisch antippen = Reservierungen sehen, verschieben oder neu anlegen · gestrichelte Linie = Tische einer gemeinsamen Reservierung · Reservierung auf anderen Tisch ziehen = verschieben";
 renderTables();
 })();
 </script>
