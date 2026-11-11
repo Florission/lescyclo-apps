@@ -1052,5 +1052,80 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)expire();}
 expire();renderTables();
 })();
 </script>
+<script>
+/* ---------- Reservierungsliste über den Kassendrucker (Epson) ---------- */
+(function(){
+const CP={"Ç":0x80,"ü":0x81,"é":0x82,"â":0x83,"ä":0x84,"à":0x85,"å":0x86,"ç":0x87,"ê":0x88,"ë":0x89,"è":0x8A,"ï":0x8B,"î":0x8C,"ì":0x8D,"Ä":0x8E,"Å":0x8F,
+  "É":0x90,"æ":0x91,"Æ":0x92,"ô":0x93,"ö":0x94,"ò":0x95,"û":0x96,"ù":0x97,"ÿ":0x98,"Ö":0x99,"Ü":0x9A,"ø":0x9B,"£":0x9C,"Ø":0x9D,"á":0xA0,"í":0xA1,"ó":0xA2,"ú":0xA3,
+  "ñ":0xA4,"Ñ":0xA5,"€":0xD5,"ß":0xE1,"µ":0xE6,"°":0xF8,"·":0xFA,"½":0xAB,"═":0xCD,"║":0xBA,"╔":0xC9,"╗":0xBB,"╚":0xC8,"╝":0xBC,"╠":0xCC,"╣":0xB9,"─":0xC4};
+const REPL={"„":'"',"“":'"',"”":'"',"‚":"'","‘":"'","’":"'","–":"-","—":"-","…":"...","×":"x","−":"-"," ":" "};
+function enc(str){const out=[];for(let ch of String(str)){if(REPL[ch])ch=REPL[ch];
+  const c=ch.charCodeAt(0);if(c<128){out.push(c);continue;}
+  if(CP[ch]!=null){out.push(CP[ch]);continue;}
+  const base=ch.normalize("NFD").replace(/[̀-ͯ]/g,"");
+  if(base&&base.charCodeAt(0)<128){out.push(base.charCodeAt(0));continue;}
+  if(CP[base]!=null){out.push(CP[base]);continue;}out.push(0x3F);}return out;}
+function wrapT(text,w){const out=[];for(const para of String(text).split("\n")){let cur="";
+  for(const word of para.split(/\s+/).filter(Boolean)){if(!cur)cur=word;else if((cur+" "+word).length<=w)cur+=" "+word;else{out.push(cur);cur=word;}
+    while(cur.length>w){out.push(cur.slice(0,w));cur=cur.slice(w);}}
+  if(cur)out.push(cur);}return out.length?out:[""];}
+/* Drucker: eigene Einstellung, sonst die vom Bestellbon auf diesem Gerät */
+function printerCfg(){const p=cfg.drucker||{};let bb={};try{bb=JSON.parse(localStorage.getItem("bestellbon:f_einstellungen")||"{}")||{};}catch(e){}
+  return {ip:(p.ip||bb.ip||"").trim(),port:parseInt(p.port||bb.port)||9100,width:parseInt(p.width||bb.width)||48};}
+function listBytes(d){const pc=printerCfg(),W=pc.width,W2=Math.floor(W/2),ESC=0x1b,GS=0x1d;
+  const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
+  const sz=v=>b.push(GS,0x21,v),bold=v=>b.push(ESC,0x45,v?1:0),al=a=>b.push(ESC,0x61,a);
+  const all=dayRes(d),list=all.filter(active),pers=list.reduce((s,r)=>s+r.persons,0),hc=list.filter(r=>r.highchair).length;
+  al(1);sz(0x11);bold(1);n("RESERVIERUNGEN");nl();bold(0);sz(0x01);n(fmtDay(d));nl();sz(0);
+  const now=new Date();n("gedruckt "+pad(now.getDate())+"."+pad(now.getMonth()+1)+". "+pad(now.getHours())+":"+pad(now.getMinutes()));nl();
+  al(0);n("=".repeat(W));nl();
+  bold(1);n(`${list.length} Reserv. · ${pers} Pers.`+(hc?` · ${hc} Kinderst.`:""));nl();bold(0);
+  n("=".repeat(W));nl();
+  if(!list.length){nl();al(1);n("Keine Reservierungen.");nl();al(0);}
+  for(const r of list){nl();
+    const tb=r.tables&&r.tables.length?"T"+r.tables.join("+"):"ohne Tisch";
+    sz(0x11);bold(1);wrapT(`${r.time} ${r.persons}P ${tb}`,W2).forEach(x=>{n(x);nl();});
+    sz(0x01);wrapT(r.name,W).forEach(x=>{n(x);nl();});sz(0);bold(0);
+    const g=guests.find(x=>x.id===r.guestId),meta=[];
+    if(r.phone)meta.push("Tel. "+r.phone);
+    if(r.highchair)meta.push("Kinderstuhl");
+    if(r.status==="da")meta.push("ist da");
+    if(meta.length)wrapT(meta.join(" · "),W).forEach(x=>{n(x);nl();});
+    if(r.note)wrapT(">> "+r.note,W).forEach(x=>{n(x);nl();});
+    if(g&&g.note)wrapT("Gast: "+g.note,W).forEach(x=>{n(x);nl();});
+    n("-".repeat(W));nl();}
+  const off=all.filter(r=>!active(r));
+  if(off.length){nl();n("Storniert / No-Show: "+off.map(r=>r.time+" "+String(r.name).split(" ")[0]).join(", "));nl();}
+  b.push(ESC,0x64,5,GS,0x56,66,0);return b;}
+function b64(arr){let s="";for(let i=0;i<arr.length;i+=4096)s+=String.fromCharCode.apply(null,arr.slice(i,i+4096));return btoa(s);}
+const pend={};
+const _onP=window.onPrinted;window.onPrinted=(id,ok,err)=>{const f=pend[id];if(!f)return _onP&&_onP(id,ok,err);delete pend[id];f(ok,err);};
+function printDay(d){const pc=printerCfg(),btn=$("dPrint");
+  if(typeof A.print!=="function")return say("Drucken geht in der Web-App auf iPad oder Handy (im Laden-WLAN).","err");
+  if(!pc.ip)return show("einst"),say("Bitte zuerst die IP-Adresse des Kassendruckers eintragen.","err",$("pMsg"));
+  btn.disabled=true;btn.textContent="Druckt …";
+  const id="r"+Date.now()+Math.random();
+  pend[id]=(ok,err)=>{btn.disabled=false;btn.textContent="🖨 Liste drucken";say(ok?"Liste für "+short(d)+" gedruckt.":"Nicht gedruckt: "+err,ok?"ok":"err");};
+  A.print(id,pc.ip,pc.port,b64(listBytes(d)));}
+
+/* Knopf in der Tagesansicht */
+const pb=document.createElement("button");pb.type="button";pb.id="dPrint";pb.textContent="🖨 Liste drucken";
+pb.onclick=()=>printDay(day);$("dToday").after(pb);
+
+/* Einstellungen: Kassendrucker */
+const box=document.createElement("form");box.className="panel";box.id="pForm";box.autocomplete="off";
+box.innerHTML=`<h2>Kassendrucker</h2>
+  <p class="note">Für „Liste drucken“. Leer lassen = Einstellung aus dem Bestellbon auf diesem Gerät übernehmen. Gerät und Drucker müssen im Laden-WLAN sein.</p>
+  <div class="row2"><label>IP-Adresse<input id="pIp" inputmode="decimal" placeholder="z. B. 192.168.1.50"></label>
+  <label>Papierbreite<select id="pWidth"><option value="">wie Bestellbon</option><option value="48">80 mm (48 Zeichen)</option><option value="42">80 mm (42 Zeichen)</option><option value="32">58 mm (32 Zeichen)</option></select></label></div>
+  <div class="actions"><button type="submit" class="primary">Speichern</button></div><div class="msg" id="pMsg"></div>`;
+$("sForm").after(box);
+box.addEventListener("submit",e=>{e.preventDefault();cfg.drucker={ip:$("pIp").value.trim(),width:$("pWidth").value};
+  if(save("einstellungen",cfg))say("Gespeichert.","ok",$("pMsg"));});
+const _rs=renderSettings;renderSettings=function(){_rs.apply(this,arguments);const p=cfg.drucker||{},pc=printerCfg();
+  $("pIp").value=p.ip||"";$("pIp").placeholder=pc.ip&&!p.ip?pc.ip+" (vom Bestellbon)":"z. B. 192.168.1.50";$("pWidth").value=p.width||"";say("","",$("pMsg"));};
+window.resListBytes=listBytes;
+})();
+</script>
 </body>
 </html>
