@@ -985,5 +985,72 @@ setInterval(runAutoBackup,60*60*1000);
 const _rs=renderSettings;renderSettings=function(){_rs.apply(this,arguments);showInfo();};
 })();
 </script>
+<script>
+/* ---------- Tische für heute umstellen · um 0 Uhr automatisch zurück zum Grundplan ---------- */
+(function(){
+const css=document.createElement("style");css.textContent=`
+#arrBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#arrBar button{min-height:48px;font-size:16px;font-weight:700}
+#arrBar .on{background:var(--warn,#b7791f);border-color:var(--warn,#b7791f);color:#fff}
+#arrInfo{font-size:14px;font-weight:600;color:var(--warn,#b7791f)}
+body.arrMode #bookPlan{outline:3px dashed var(--warn,#b7791f);outline-offset:4px;touch-action:none}
+body.arrMode #bookPlan .tbl{cursor:grab;touch-action:none}
+body.arrMode #bookPlan .rchip{pointer-events:none}
+#bookPlan .tbl.arrDrag{z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.35);opacity:.9}
+`;document.head.append(css);
+
+let arr=false;
+const ov=()=>cfg.dayPlan&&cfg.dayPlan.day===todayIso()?cfg.dayPlan:null;
+const activeFor=date=>{const o=ov();return o&&date===o.day?o:null;};
+/* Abgelaufenen Tagesplan (von gestern) wegräumen */
+function expire(){if(cfg.dayPlan&&cfg.dayPlan.day!==todayIso()){delete cfg.dayPlan;arr=false;document.body.classList.remove("arrMode");save("einstellungen",cfg);renderTables();return true;}return false;}
+
+const bar=document.createElement("div");bar.id="arrBar";
+bar.innerHTML=`<button type="button" id="arrBtn">↔ Tische umstellen</button><button type="button" id="arrReset" hidden>Grundplan wiederherstellen</button><span id="arrInfo"></span>`;
+$("planCap").parentElement.after(bar);
+function updBar(){const date=$("fDate").value,o=activeFor(date),isToday=date===todayIso();
+  bar.hidden=!isToday;
+  $("arrBtn").textContent=arr?"✓ Fertig":"↔ Tische umstellen";$("arrBtn").classList.toggle("on",arr);
+  $("arrReset").hidden=!o;
+  $("arrInfo").textContent=arr?"Tische mit dem Finger verschieben – gilt nur für heute.":o?"Heute umgestellt · ab 0 Uhr wieder Grundplan":"";}
+$("arrBtn").onclick=()=>{arr=!arr;document.body.classList.toggle("arrMode",arr);renderTables();};
+$("arrReset").onclick=()=>{const b=$("arrReset");if(b.textContent!=="Wirklich zurücksetzen?"){b.textContent="Wirklich zurücksetzen?";setTimeout(()=>b.textContent="Grundplan wiederherstellen",4000);return;}
+  delete cfg.dayPlan;arr=false;document.body.classList.remove("arrMode");save("einstellungen",cfg);renderTables();b.textContent="Grundplan wiederherstellen";};
+
+/* Tagesplan beim Zeichnen anwenden, Grundplan bleibt unverändert */
+const _rbp=renderBookPlan;
+renderBookPlan=function(busy){
+  if(rightMode!=="plan")return _rbp(busy);
+  expire();const o=activeFor($("fDate").value),kept=[];
+  if($("fDate").value!==todayIso()&&arr){arr=false;document.body.classList.remove("arrMode");}
+  if(o)for(const t of cfg.tables){const p=o.pos[t.id];if(p){kept.push([t,t.x,t.y]);t.x=p.x;t.y=p.y;}}
+  try{_rbp(busy);}finally{for(const [t,x,y] of kept){t.x=x;t.y=y;}}
+  updBar();if(arr)makeDraggable();};
+
+function makeDraggable(){
+  const box=$("bookPlan"),list=cfg.tables.filter(x=>x.area===bookArea),els=[...box.querySelectorAll(":scope>.tbl")];
+  if(els.length!==list.length)return;
+  const ar=String(box.style.aspectRatio||"").split("/").map(Number);
+  list.forEach((t,i)=>{const el=els[i];el.onclick=null;
+    el.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();
+      const r=box.getBoundingClientRect(),bw=ar[0]>0?ar[0]:PW,k=bw/r.width,o=cfg.dayPlan&&cfg.dayPlan.day===todayIso()?cfg.dayPlan.pos[t.id]:null;
+      const d={x0:e.clientX,y0:e.clientY,bx:o?o.x:t.x,by:o?o.y:t.y,k,moved:false};
+      el.setPointerCapture(e.pointerId);el.classList.add("arrDrag");
+      const mvH=ev=>{const dx=ev.clientX-d.x0,dy=ev.clientY-d.y0;if(Math.abs(dx)+Math.abs(dy)>4)d.moved=true;el.style.transform=`translate(${dx}px,${dy}px)`;d.dx=dx;d.dy=dy;};
+      const upH=()=>{el.removeEventListener("pointermove",mvH);el.removeEventListener("pointerup",upH);el.removeEventListener("pointercancel",upH);
+        el.classList.remove("arrDrag");el.style.transform="";
+        if(!d.moved)return;
+        const nx=clamp(snap(d.bx+d.dx*d.k),0,PW-t.w),ny=clamp(snap(d.by+d.dy*d.k),0,PH-t.h);
+        if(!cfg.dayPlan||cfg.dayPlan.day!==todayIso())cfg.dayPlan={day:todayIso(),pos:{}};
+        cfg.dayPlan.pos[t.id]={x:nx,y:ny};save("einstellungen",cfg);renderTables();};
+      el.addEventListener("pointermove",mvH);el.addEventListener("pointerup",upH);el.addEventListener("pointercancel",upH);});
+  });}
+
+/* um Mitternacht (und beim Öffnen) zurück auf den Grundplan */
+setInterval(expire,60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)expire();});
+expire();renderTables();
+})();
+</script>
 </body>
 </html>
