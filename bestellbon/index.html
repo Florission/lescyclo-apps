@@ -185,6 +185,9 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .gangBtn.later{background:var(--blue-soft);color:var(--blue);border-color:var(--blue)}
 .gangSel{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .gangSel .seg button{min-height:44px;padding:6px 16px;font-size:16px}
+.gangTop{position:sticky;top:-16px;z-index:3;background:var(--surface);margin:-16px -16px 0;padding:10px 16px;border-radius:14px 14px 0 0;border-bottom:1px solid var(--line)}
+#tGrid .gangTop{top:-10px;margin:-10px -10px 0;padding:8px 10px}
+.gangTop .seg button{min-height:50px;font-size:17px;font-weight:700}
 .gangSel .seg button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .gTag{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
 .gangCall{margin-top:6px}.gangCall button{flex:1}
@@ -239,6 +242,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
     <div class="tSw" id="tSw"><button data-tp="karte">↑ Speisekarte</button><button data-tp="rechnung">↓ Rechnung</button></div>
     <div class="grid" id="tGrid" style="margin-top:14px">
       <div class="panel">
+        <div class="gangSel gangTop"><span class="note">Neue Speisen in:</span><div class="seg" id="gSel"></div></div>
         <div class="seg" id="cats"></div>
         <div class="items" id="items"></div>
       </div>
@@ -506,7 +510,10 @@ $("pFreeName").onkeydown=e=>{if(e.key==="Enter")$("pFreeOk").click();};
 /* ---------- Tisch: Speisekarte ---------- */
 let cat=0;
 function priceText(it){return it.variants.map(v=>(v.label?v.label+" ":"")+eur(v.price)).join(" · ");}
-function renderMenu(){
+function renderGang(){const gs=$("gSel");if(!gs)return;gs.textContent="";
+  [1,2,3].forEach(g=>{const b=document.createElement("button");b.textContent=g+". Gang";if(g===gangSel)b.className="on";
+    b.onclick=()=>{gangSel=g;renderGang();};gs.append(b);});}
+function renderMenu(){renderGang();
   if(cat>=menu.length)cat=0;
   const cb=$("cats");cb.textContent="";
   menu.forEach((c,i)=>{const b=document.createElement("button");b.textContent=c.name;if(i===cat)b.classList.add("on");b.onclick=()=>{cat=i;renderMenu();};cb.append(b);});
@@ -581,7 +588,6 @@ function renderTisch(){if(!cur)return show("plan");
   if(mode==="pay")renderPay();else renderSide();updSw();}
 function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   s.innerHTML=`<div class="sideHead"><h2>Rechnung ${esc(cur)}</h2>${t?`<span class="note">seit ${hm(new Date(t.opened))}</span>`:""}</div>
-    <div class="gangSel"><span class="note">Neue Speisen:</span><div class="seg" id="gSel"></div></div>
     <button id="tSwMore" class="tSwMore">+ Artikel aus der Speisekarte</button>
     <div class="lines" id="lines"></div>
     <div class="sum"><span>Gesamt</span><span>${eur((t?total(t):0)+sumL(dr))}</span></div>
@@ -589,7 +595,6 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
       <button id="dBook" class="primary big" ${dr.length?"":"disabled"}>${dr.length?"Bonieren ("+dr.reduce((a,l)=>a+l.qty,0)+")":"Bonieren"}</button></div>
     <div class="actions"><button id="toPay" class="big grow" ${t&&!dr.length?"":"disabled"}>Abrechnen</button></div>
     ${t&&dr.length?`<p class="note">Zum Abrechnen erst die neuen Artikel bonieren.</p>`:""}`;
-  const gs=$("gSel");[1,2,3].forEach(g=>{const b=document.createElement("button");b.textContent=g+". Gang";if(g===gangSel)b.className="on";b.onclick=()=>{gangSel=g;renderSide();};gs.append(b);});
   const box=$("lines");
   if(!t&&!dr.length)box.innerHTML=`<div class="empty">Noch nichts bestellt. Links Gerichte antippen.</div>`;
   if(t){box.insertAdjacentHTML("beforeend",`<div class="grp">Boniert</div>`);
