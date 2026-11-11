@@ -148,6 +148,12 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
   #tGrid>.panel{padding:10px}
   #tGrid>.panel.sticky{position:sticky;top:6px;max-height:calc(100dvh - 12px);overflow:auto}
 }
+/* Zwei Spalten: Speisekarte und Rechnung scrollen jede für sich */
+@media (min-width:601px){
+  #tGrid{height:var(--tH,calc(100dvh - 190px));align-items:stretch}
+  #tGrid>.panel{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  #tGrid>.panel.sticky{position:static;max-height:none}
+}
 @media (max-width:600px){
   #tGrid{grid-template-columns:1fr}
   #tGrid>.panel.sticky{position:static;max-height:none;overflow:visible}
@@ -408,7 +414,7 @@ function show(v){view=v;const tv=v==="tisch"?"plan":v;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===tv));
   VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
   if(v==="plan")renderPlan(); if(v==="tisch")renderTisch(); if(v==="bons")renderHist(); if(v==="karte")renderEditor(); if(v==="einst")renderSettings();
-  window.scrollTo(0,0);}
+  window.scrollTo(0,0);if(v==="tisch")fitT();}
 window.onBack=()=>{
   if(!$("chooser").hidden)return $("chooser").hidden=true;
   if(!$("tpBox").hidden)return $("tpBox").hidden=true;
@@ -464,7 +470,14 @@ let planView=(()=>{try{return localStorage.getItem("bon_planView")||"";}catch(e)
 document.querySelectorAll("#pvSw button").forEach(b=>b.onclick=()=>{planView=b.dataset.pv;try{localStorage.setItem("bon_planView",planView);}catch(e){}renderPlan();});
 function fitPlan(){const p=$("plan");if(!p||$("v-plan").hidden)return;
   const top=p.getBoundingClientRect().top+window.scrollY,leg=50;p.style.setProperty("--planTop",Math.round(top+leg)+"px");}
-window.addEventListener("resize",()=>{if(view==="plan")fitPlan();});
+window.addEventListener("resize",()=>{if(view==="plan")fitPlan();fitT();});
+/* Tisch-Ansicht: beide Spalten genau bis zum unteren Bildschirmrand, damit jede einzeln scrollt */
+function fitT(){const g=$("tGrid");if(!g)return;
+  if(view!=="tisch"||innerWidth<=600){g.style.removeProperty("--tH");return;}
+  const top=g.getBoundingClientRect().top+scrollY;
+  const below=Math.max(0,document.documentElement.scrollHeight-(top+g.offsetHeight));
+  g.style.setProperty("--tH",Math.max(320,Math.floor(innerHeight-top-below-4))+"px");}
+window.addEventListener("orientationchange",()=>setTimeout(fitT,300));
 function renderPlan(){const map=occupancy(),labels=openLabels();
   const onTap=(id,k)=>{
     if(multi){if(k)return say(`Tisch ${id} ist schon besetzt.`,"err",$("pMsg"));
