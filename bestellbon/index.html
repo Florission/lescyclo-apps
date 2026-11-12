@@ -166,6 +166,11 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:84px;text-align:left;background:var(--blue-soft);border-color:var(--blue)}
 .tbtn b{font-size:17px}.tbtn span{font-family:var(--font-num);color:var(--muted);font-size:14px}
+.imLines{max-height:34dvh;overflow:auto;margin:8px 0;padding-right:4px}
+.imLines .ln{grid-template-columns:auto 1fr auto}
+.imLines .ln.on{background:var(--warn-soft);border-radius:8px;padding:4px 6px}
+.imLines .qty b small{font-size:13px;color:var(--muted);font-weight:400}
+#imBox .tpDlg .plan{width:min(100%,calc((100dvh - 460px)*var(--ar,1.2)));min-width:280px}
 .tpDlg{width:min(980px,96vw);max-width:none;max-height:96dvh;overflow:auto}
 .tpDlg .plan{width:min(100%,calc((100dvh - 230px)*var(--ar,1.2)));min-width:0}
 
@@ -327,6 +332,13 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
   </div>
 </div>
 
+<div class="overlay" id="imBox" hidden><div class="panel dialog tpDlg">
+  <h2 id="imTitle">Artikel verschieben</h2>
+  <div class="note">1. Artikel und Menge wählen · 2. Ziel-Tisch antippen. Ist der Tisch besetzt, kommen die Artikel auf dessen Rechnung.</div>
+  <div class="lines imLines" id="imLines"></div>
+  <div class="planWrap"><div class="plan" id="imPlan"></div></div>
+  <div class="actions"><button type="button" id="imCancel">Abbrechen</button><button type="button" id="imOk" class="primary big">Verschieben</button></div>
+</div></div>
 <div class="overlay" id="tpBox" hidden><div class="panel dialog tpDlg">
   <h2 id="tpTitle">Tisch wechseln</h2>
   <div class="note">Neue(n) Tisch(e) antippen. Ist ein Tisch schon besetzt, werden die Rechnungen zusammengelegt.</div>
@@ -422,6 +434,7 @@ function show(v){view=v;const tv=v==="tisch"?"plan":v;
 window.onBack=()=>{
   if(!$("chooser").hidden)return $("chooser").hidden=true;
   if(!$("tpBox").hidden)return $("tpBox").hidden=true;
+  if(!$("imBox").hidden)return $("imBox").hidden=true;
   if(view==="tisch"&&mode==="pay"){mode="order";return renderTisch();}
   if(view!=="plan")show("plan");};
 let tPane="karte";
@@ -594,6 +607,7 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
     <div class="actions">${dr.length?`<button id="dClear" class="danger">Neue verwerfen</button>`:""}
       <button id="dBook" class="primary big" ${dr.length?"":"disabled"}>${dr.length?"Bonieren ("+dr.reduce((a,l)=>a+l.qty,0)+")":"Bonieren"}</button></div>
     <div class="actions"><button id="toPay" class="big grow" ${t&&!dr.length?"":"disabled"}>Abrechnen</button></div>
+    ${t&&t.lines.length?`<div class="actions"><button id="toMoveItems" class="grow">⇄ Artikel auf anderen Tisch</button></div>`:""}
     ${t&&dr.length?`<p class="note">Zum Abrechnen erst die neuen Artikel bonieren.</p>`:""}`;
   const box=$("lines");
   if(!t&&!dr.length)box.innerHTML=`<div class="empty">Noch nichts bestellt. Links Gerichte antippen.</div>`;
@@ -633,6 +647,7 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   $("dBook").onclick=book;
   $("toPay").onclick=()=>{if(!tabs[cur]||draftOf(cur).length)return;mode="pay";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();};
   if($("tSwMore"))$("tSwMore").onclick=()=>setPane("karte");
+  if($("toMoveItems"))$("toMoveItems").onclick=openItemMove;
   updSw();}
 
 /* Bonieren: Küchenbon (Speisen nach Gängen) + separater Getränkebon, dann auf den Tisch buchen */
@@ -725,6 +740,46 @@ $("tpOk").onclick=()=>{if(!moveSel.length)return;const to=labelFor(moveSel),from
   hit.forEach(k=>mergeInto(k,to));mergeInto(from,to);saveTabs();saveDrafts();
   cur=to;mode="order";renderTisch();say(`Umgesetzt: ${from} → ${to}`+(hit.size?" (zusammengelegt)":""),"ok");};
 $("tBack").onclick=()=>show("plan");
+
+/* Einzelne Artikel auf einen anderen Tisch verschieben */
+let imQty=[],imSel=[];
+function openItemMove(){const t=tabs[cur];if(!t||!t.lines.length)return;
+  imQty=t.lines.map(()=>0);imSel=[];$("imTitle").textContent="Artikel von "+cur+" verschieben";drawItemMove();$("imBox").hidden=false;}
+function imTarget(){if(!imSel.length)return "";const map=occupancy(),own=imSel.map(id=>map[id]).filter(Boolean);
+  /* ein besetzter Tisch angetippt → auf dessen Rechnung */
+  if(imSel.length===1&&own[0])return own[0];return labelFor(imSel);}
+function drawItemMove(){const t=tabs[cur];if(!t)return closeItemMove();const box=$("imLines");box.textContent="";
+  t.lines.forEach((l,i)=>{const d=document.createElement("div");d.className="ln"+(imQty[i]?" on":"");
+    const q=document.createElement("div");q.className="qty";
+    const m=document.createElement("button");m.type="button";m.textContent="−";m.disabled=!imQty[i];m.onclick=()=>{imQty[i]--;drawItemMove();};
+    const n=document.createElement("b");n.innerHTML=`${imQty[i]}<small>/${l.qty}</small>`;
+    const p=document.createElement("button");p.type="button";p.textContent="+";p.disabled=imQty[i]>=l.qty;p.onclick=()=>{imQty[i]++;drawItemMove();};
+    q.append(m,n,p);
+    const tt=document.createElement("div");tt.innerHTML=`<div class="t">${esc(lineName(l))}${isFood(l)&&(l.gang||1)>1?` <span class="gTag">${l.gang}. Gang</span>`:""}</div>${l.note?`<div class="sub">${esc(l.note)}</div>`:""}`;
+    tt.style.cursor="pointer";tt.onclick=()=>{imQty[i]=imQty[i]===l.qty?0:l.qty;drawItemMove();};
+    const pr=document.createElement("div");pr.className="p";pr.textContent=eur(l.price*(imQty[i]||l.qty));
+    d.append(q,tt,pr);box.append(d);});
+  const map=occupancy();
+  drawPlan($("imPlan"),imSel,map,id=>{if(tablesOf(cur).includes(id))return;imSel=imSel.includes(id)?imSel.filter(x=>x!==id):[...imSel,id];drawItemMove();});
+  const cnt=imQty.reduce((a,b)=>a+b,0),to=imTarget();
+  $("imOk").disabled=!cnt||!to||to===cur;
+  $("imOk").textContent=!cnt?"Artikel wählen":!to?"Ziel-Tisch wählen":`${cnt} Artikel → ${to}`;}
+function closeItemMove(){$("imBox").hidden=true;}
+$("imCancel").onclick=closeItemMove;
+$("imBox").onclick=e=>{if(e.target===$("imBox"))closeItemMove();};
+$("imOk").onclick=()=>{const t=tabs[cur],to=imTarget(),from=cur;if(!t||!to||to===from)return;
+  const moved=[];t.lines.forEach((l,i)=>{const q=imQty[i]||0;if(q>0)moved.push(Object.assign(clone(l),{qty:q}));});
+  if(!moved.length)return;
+  /* weitere besetzte Tische in der Auswahl (bei Kombination) zusammenlegen */
+  const map=occupancy();new Set(imSel.map(id=>map[id]).filter(k=>k&&k!==to&&k!==from)).forEach(k=>mergeInto(k,to));
+  t.lines=t.lines.map((l,i)=>Object.assign(l,{qty:l.qty-(imQty[i]||0)})).filter(l=>l.qty>0);
+  const tt=tabs[to]||(tabs[to]={label:to,lines:[],opened:new Date().toISOString()});
+  for(const l of moved){const x=tt.lines.find(y=>sameLine(y,l));if(x)x.qty+=l.qty;else tt.lines.push(l);}
+  const gone=!t.lines.length;if(gone)delete tabs[from];
+  saveTabs();closeItemMove();
+  const n=moved.reduce((a,l)=>a+l.qty,0);
+  if(gone&&!draftOf(from).length){cur=to;}
+  mode="order";renderTisch();say(`${n} Artikel von ${from} → ${to} verschoben`+(gone?` (${from} ist jetzt leer)`:""),"ok");};
 
 /* ---------- Bon (ESC/POS) ---------- */
 const CP={"Ç":0x80,"ü":0x81,"é":0x82,"â":0x83,"ä":0x84,"à":0x85,"å":0x86,"ç":0x87,"ê":0x88,"ë":0x89,"è":0x8A,"ï":0x8B,"î":0x8C,"ì":0x8D,"Ä":0x8E,"Å":0x8F,

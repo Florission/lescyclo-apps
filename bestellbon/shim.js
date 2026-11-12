@@ -73,7 +73,7 @@ window.Android = {
     canSync: () => {
       if (typeof view === 'undefined') return true;
       const hid = (id) => { const e = document.getElementById(id); return !e || e.hidden; };
-      return !(view === 'tisch' && mode === 'pay') && view !== 'karte' && view !== 'einst' && hid('tpBox') && hid('chooser');
+      return !(view === 'tisch' && mode === 'pay') && view !== 'karte' && view !== 'einst' && hid('tpBox') && hid('imBox') && hid('chooser');
     },
     onChange: () => {
       hist = load('bons', []); tabs = load('tische', {});
