@@ -262,7 +262,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
   <section id="v-bons" hidden>
     <div class="panel">
       <h2>Letzte Bons</h2>
-      <p class="note">Die letzten 50 Abrechnungen. „Übernehmen“ legt die Positionen als neue Bestellung auf den Tisch.</p>
+      <p class="note">Alle Abrechnungen dieser Woche – jeden Montag um 0 Uhr wird alles gelöscht. „Übernehmen“ legt die Positionen als neue Bestellung auf den Tisch.</p>
       <div class="tablewrap"><table>
         <thead><tr><th>Zeit</th><th>Tisch / Name</th><th>Positionen</th><th class="num">Summe</th><th></th></tr></thead>
         <tbody id="hist"></tbody>
@@ -387,6 +387,15 @@ if(cfg.head==="Le's Cyclo")cfg.head="LC-POTSDAM";
 let hist=load("bons",[]);
 let tabs=load("tische",{});        // boniert, offen am Tisch
 let drafts=load("entwuerfe",{});   // angetippt, noch nicht boniert
+/* Wochen-Reset: jeden Montag 0 Uhr alles vom Vorwoche löschen (Bons, offene Tische, nicht bonierte Artikel) */
+function weekCut(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString();}
+function weeklyPurge(){const cut=weekCut();let last="";try{last=localStorage.getItem("bestellbon:last_purge")||"";}catch(e){}
+  if(last>=cut)return false;
+  hist=hist.filter(h=>h.at>=cut);save("bons",hist);
+  for(const k of Object.keys(tabs))if(!tabs[k].opened||tabs[k].opened<cut)delete tabs[k];save("tische",tabs);
+  if(last){drafts={};save("entwuerfe",drafts);}
+  try{localStorage.setItem("bestellbon:last_purge",cut);}catch(e){}return true;}
+weeklyPurge();
 const saveTabs=()=>save("tische",tabs), saveDrafts=()=>save("entwuerfe",drafts);
 /* Übernahme aus der alten Version (eine offene Bestellung) */
 (function(){const o=load("offen",null);if(!o)return;
@@ -483,7 +492,8 @@ async function fetchResPlan(){try{const c=JSON.parse(localStorage.getItem("lescy
   localStorage.setItem("bestellbon:plan_cache",JSON.stringify({tables:e.tables,areas:e.areas,dayPlan:e.dayPlan}));
   if(applyPlan())refreshPlanViews();}catch(e){}}
 function refreshPlanViews(){try{if(view==="plan")renderPlan();else if(!$("tpBox").hidden)drawMove();else if(!$("imBox").hidden)drawItemMove();}catch(e){}}
-setTimeout(fetchResPlan,500);setInterval(()=>{if(document.visibilityState==="visible")fetchResPlan();},120000);
+setTimeout(fetchResPlan,500);
+setInterval(()=>{if(weeklyPurge()){try{show(view==="tisch"?"plan":view);}catch(e){}}},5*60000);setInterval(()=>{if(document.visibilityState==="visible")fetchResPlan();},120000);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")fetchResPlan();});
 /* um Mitternacht fällt die Tages-Umstellung weg */
 setInterval(()=>{if(applyPlan())refreshPlanViews();},60000);
@@ -741,7 +751,7 @@ function renderPay(){const d=$("side"),t=tabs[cur];if(!t){mode="order";return re
   const selection=()=>t.lines.map((l,i)=>Object.assign(clone(l),{qty:pay[i]})).filter(l=>l.qty>0);
   const settle=(sel,when,printed)=>{const label=t.label,d0=disc;
     t.lines.forEach((l,i)=>l.qty-=pay[i]);t.lines=t.lines.filter(l=>l.qty>0);
-    hist.unshift({at:when.toISOString(),label,lines:sel,discount:d0});hist=hist.slice(0,50);save("bons",hist);
+    hist.unshift({at:when.toISOString(),label,lines:sel,discount:d0});hist=hist.slice(0,1000);save("bons",hist);
     disc=0;armed="";
     if(!t.lines.length){delete tabs[cur];saveTabs();show("plan");
       return say(`${label} abgerechnet (${eur(sumL(sel)-Math.round(sumL(sel)*d0/100))})${printed?" – Rechnung gedruckt":""}. Tisch ist frei.`,"ok",$("pMsg"));}

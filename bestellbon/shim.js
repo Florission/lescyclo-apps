@@ -60,11 +60,13 @@ window.Android = {
     }
     return out;
   }
-  // Abgerechnete Bons: alle behalten, neueste zuerst, max. 50
+  // Abgerechnete Bons: nur die laufende Woche, neueste zuerst
   function mergeHist(b, l, r) {
     const m = new Map();
-    for (const h of [...(r || []), ...(l || [])]) m.set(h.at + '|' + h.label, h);
-    return [...m.values()].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0)).slice(0, 50);
+    // Wochen-Reset: nichts von vor Montag 0 Uhr zurückholen
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const cut = d.toISOString();
+    for (const h of [...(r || []), ...(l || [])]) if (h.at >= cut) m.set(h.at + '|' + h.label, h);
+    return [...m.values()].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0)).slice(0, 1000);
   }
   LC.setupSync({
     keys: ['tische', 'bons', 'speisekarte', 'einstellungen'],
