@@ -341,7 +341,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 </div></div>
 <div class="overlay" id="tpBox" hidden><div class="panel dialog tpDlg">
   <h2 id="tpTitle">Tisch wechseln</h2>
-  <div class="note">Neue(n) Tisch(e) antippen. Ist ein Tisch schon besetzt, werden die Rechnungen zusammengelegt.</div>
+  <div class="note">Ziel-Tisch antippen. Ist er besetzt, kommt alles auf dessen Rechnung. Der alte Tisch ist danach frei.</div>
   <div class="planWrap"><div class="plan" id="tpPlan"></div></div>
   <div class="actions"><button type="button" id="tpCancel">Abbrechen</button><button type="button" id="tpOk" class="primary big">Umsetzen</button></div>
 </div></div>
@@ -731,11 +731,14 @@ function mergeInto(from,to){if(from===to)return;const a=tabs[from];
     delete tabs[from];}
   const d=drafts[from];if(d&&d.length)drafts[to]=draftOf(to).concat(d);delete drafts[from];}
 function drawMove(){drawPlan($("tpPlan"),moveSel,occupancy(),id=>{moveSel=moveSel.includes(id)?moveSel.filter(x=>x!==id):[...moveSel,id];drawMove();});
-  $("tpOk").disabled=!moveSel.length;$("tpOk").textContent=moveSel.length?"Umsetzen auf "+labelFor(moveSel):"Umsetzen";}
-$("tMove").onclick=()=>{moveSel=tablesOf(cur).filter(id=>TIDS.includes(id));$("tpTitle").textContent=cur+" umsetzen";drawMove();$("tpBox").hidden=false;};
+  const to=moveTarget();$("tpOk").disabled=!to||to===cur;$("tpOk").textContent=to&&to!==cur?"Umsetzen auf "+to:"Ziel-Tisch antippen";}
+/* Ziel: ein besetzter Tisch → auf dessen Rechnung; sonst die angetippten Tische. Der alte Tisch wird frei. */
+function moveTarget(){if(!moveSel.length)return "";const map=occupancy(),own=moveSel.length===1?map[moveSel[0]]:"";
+  return own&&own!==cur?own:labelFor(moveSel);}
+$("tMove").onclick=()=>{moveSel=[];$("tpTitle").textContent=cur+" umsetzen";drawMove();$("tpBox").hidden=false;};
 $("tpCancel").onclick=()=>{$("tpBox").hidden=true;};
 $("tpBox").onclick=e=>{if(e.target===$("tpBox"))$("tpBox").hidden=true;};
-$("tpOk").onclick=()=>{if(!moveSel.length)return;const to=labelFor(moveSel),from=cur;$("tpBox").hidden=true;if(to===from)return;
+$("tpOk").onclick=()=>{if(!moveSel.length)return;const to=moveTarget(),from=cur;$("tpBox").hidden=true;if(to===from)return;
   const map=occupancy(),hit=new Set(moveSel.map(id=>map[id]).filter(k=>k&&k!==from&&k!==to));
   hit.forEach(k=>mergeInto(k,to));mergeInto(from,to);saveTabs();saveDrafts();
   cur=to;mode="order";renderTisch();say(`Umgesetzt: ${from} → ${to}`+(hit.size?" (zusammengelegt)":""),"ok");};
