@@ -1127,5 +1127,48 @@ const _rs=renderSettings;renderSettings=function(){_rs.apply(this,arguments);con
 window.resListBytes=listBytes;
 })();
 </script>
+<style>
+/* ---------- iPad quer: Plan passt komplett auf den Bildschirm, Infos rechts daneben ---------- */
+.tabs button{min-height:44px;font-size:15px;padding:8px 14px}
+@media (orientation:landscape) and (min-width:900px){
+  body{padding:8px 12px 8px}
+  .wrap{gap:10px;max-width:none}
+  .eyebrow{display:none}
+  h1{font-size:20px;margin:0}
+  #v-tag>.nav{margin-bottom:8px!important}
+  #v-tag .nav button{min-height:46px;padding:6px 14px;font-size:16px}
+  #v-tag .grid>.panel{padding:10px 12px;gap:8px}
+  #v-tag .grid>.panel>.head h2{font-size:15px}
+  #rightMode button{min-height:40px;padding:4px 12px;font-size:15px}
+  #planBox:not([hidden]){display:grid!important;grid-template-columns:minmax(0,1fr) 250px;grid-template-rows:auto auto 1fr;gap:10px 14px;align-items:start}
+  #bookPlan{grid-column:1;grid-row:1/4;justify-self:center;min-width:480px;
+    width:min(100%,calc((100dvh - var(--bpTop,220px) - 10px)*var(--bpAr,1.2)))}
+  #planBox>.head{grid-column:2;grid-row:1;flex-direction:column;align-items:stretch}
+  #planBox>.head .seg{flex-wrap:wrap}
+  #arrBar{grid-column:2;grid-row:2;flex-direction:column;align-items:stretch}
+  #planBox>.legend{grid-column:2;grid-row:3;flex-direction:column;gap:6px}
+  #planHint{line-height:1.4}
+  /* Formular offen: Plan rückt nach links, Seitenleiste nicht verdecken */
+  body:has(#resDrawer:not([hidden])) .wrap{margin-right:440px}
+  body:has(#resDrawer:not([hidden])) #planBox:not([hidden]){grid-template-columns:minmax(0,1fr)}
+  body:has(#resDrawer:not([hidden])) #planBox>*{grid-column:1!important;grid-row:auto!important}
+  body:has(#resDrawer:not([hidden])) #bookPlan{grid-row:1!important;width:min(100%,calc((100dvh - var(--bpTop,220px) - 10px)*var(--bpAr,1.2)))}
+  /* Tischplan-Editor */
+  #edPlan{width:min(100%,calc((100dvh - 150px)*1.6));margin:0 auto}
+  .week .day{min-height:calc(100dvh - 160px)}
+}
+</style>
+<script>
+/* Plan-Größe fürs Querformat: Seitenverhältnis und Abstand von oben merken */
+(function(){
+function fitBook(){const b=$("bookPlan");if(!b)return;
+  const ar=String(b.style.aspectRatio||"").split("/").map(Number);if(ar[0]>0&&ar[1]>0)b.style.setProperty("--bpAr",(ar[0]/ar[1]).toFixed(4));
+  const top=b.getBoundingClientRect().top+scrollY;if(top>0)b.style.setProperty("--bpTop",Math.round(top)+"px");}
+const _r=renderBookPlan;renderBookPlan=function(){const x=_r.apply(this,arguments);requestAnimationFrame(fitBook);return x;};
+addEventListener("resize",()=>requestAnimationFrame(fitBook));
+addEventListener("orientationchange",()=>setTimeout(fitBook,300));
+requestAnimationFrame(fitBook);
+})();
+</script>
 </body>
 </html>

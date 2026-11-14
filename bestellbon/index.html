@@ -196,6 +196,72 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .gangSel .seg button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .gTag{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
 .gangCall{margin-top:6px}.gangCall button{flex:1}
+
+/* Selten gebraucht → kleiner */
+.tabs button{min-height:44px;font-size:15px;padding:8px 14px}
+.mini,.pHead .actions button.mini,.pvSw button{min-height:42px;padding:6px 12px;font-size:15px}
+#tDisc button{min-height:44px;padding:6px 14px;font-size:15px}
+.pl .x{min-height:42px;padding:4px 10px;font-size:15px}
+.gangTop .seg button{min-height:46px;font-size:16px}
+
+/* Kategorien: farbig, groß, Getränke und Speisen mit Abstand */
+#cats{display:flex;flex-direction:column;gap:0}
+.catGrp{display:flex;flex-wrap:wrap;gap:8px}
+.catGrp+.catGrp{margin-top:12px;padding-top:12px;border-top:2px dashed var(--line)}
+.catLbl{flex-basis:100%;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:-2px}
+#cats button{--s:55%;min-height:64px;padding:10px 20px;font-size:19px;font-weight:700;line-height:1.15;
+  background:hsl(var(--h) var(--s) 93%);border:2px solid hsl(var(--h) var(--s) 45%);color:hsl(var(--h) var(--s) 20%)}
+#cats button.on{background:hsl(var(--h) var(--s) 36%);border-color:hsl(var(--h) var(--s) 36%);color:#fff;box-shadow:0 0 0 3px hsl(var(--h) var(--s) 75%)}
+.items .item{background:hsl(var(--h) var(--s) 96%);border:1px solid hsl(var(--h) var(--s) 80%);border-left:7px solid hsl(var(--h) var(--s) 45%)}
+.items .item:active{background:hsl(var(--h) var(--s) 86%)}
+@media (prefers-color-scheme:dark){
+  #cats button{background:hsl(var(--h) var(--s) 20%);border-color:hsl(var(--h) var(--s) 50%);color:hsl(var(--h) var(--s) 88%)}
+  #cats button.on{background:hsl(var(--h) var(--s) 58%);border-color:hsl(var(--h) var(--s) 58%);color:#111;box-shadow:0 0 0 3px hsl(var(--h) var(--s) 30%)}
+  .items .item{background:hsl(var(--h) var(--s) 16%);border-color:hsl(var(--h) var(--s) 30%);border-left-color:hsl(var(--h) var(--s) 55%)}
+  .items .item:active{background:hsl(var(--h) var(--s) 26%)}
+}
+.menuBody{display:flex;flex-direction:column;gap:14px}
+
+/* Abrechnen: Alles / Getrennt */
+.payMode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.payMode button{min-height:56px;font-weight:700}
+.payMode button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.pl.pick{cursor:pointer}
+.pl.pick.off{opacity:.8}
+.pl.pick{grid-template-columns:auto 1fr auto}
+.pl.pick>div:nth-child(1){grid-column:1/-1}
+.pl.pick .p{text-align:right}
+@media (max-width:900px){.payFoot{bottom:-10px!important;margin:0 -10px -10px!important;padding:8px 10px 10px!important}}
+.payFoot{position:sticky;bottom:-16px;margin:0 -16px -16px;padding:10px 16px 16px;background:var(--surface);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;border-radius:0 0 14px 14px;z-index:2}
+.pl.pick.sel{background:var(--accent-soft);border-radius:8px;padding:6px;opacity:1}
+.pl .qn{font-family:var(--font-num);font-weight:700;min-width:2.4em;text-align:right}
+.payHint{background:var(--warn-soft);border-radius:var(--r);padding:8px 12px;font-size:14px;font-weight:600}
+.tsum.rest{color:var(--muted)}
+
+/* iPad quer: Kategorien als Spalte links, alles auf einen Bildschirm */
+@media (orientation:landscape) and (min-width:900px){
+  body{padding:8px 12px 8px}
+  .wrap{gap:10px;max-width:none}
+  .eyebrow{display:none}
+  h1{font-size:20px;margin:0}
+  body[data-view="tisch"] header{display:none}
+  .tHead button{min-height:46px;padding:6px 14px;font-size:16px}
+  .tHead h2{font-size:22px}
+  #tGrid{margin-top:0!important;grid-template-columns:minmax(0,1fr) minmax(340px,400px)}
+  #menuPanel{overflow:hidden!important;padding:10px}
+  #menuPanel .gangTop{position:static;margin:-10px -10px 0;padding:8px 10px}
+  .menuBody{flex:1;min-height:0;display:grid;grid-template-columns:215px minmax(0,1fr);gap:12px}
+  #cats{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:3px 4px 3px 3px}
+  #cats .catGrp{flex-direction:column;flex-wrap:nowrap;gap:6px}
+  #cats button{width:100%;text-align:left;min-height:52px;font-size:17px;padding:6px 12px}
+  .catGrp+.catGrp{margin-top:8px;padding-top:8px}
+  #items{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-content:start;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .item{min-height:88px}
+  /* ganzer Tischplan ohne Scrollen sichtbar */
+  .plan#plan{width:min(100%,calc((100dvh - var(--planTop,150px))*var(--ar,1.2)));min-width:480px}
+  #v-plan .panel{padding:10px 12px}
+}
+@media (max-width:600px){#cats button{min-height:52px;font-size:16px;padding:8px 14px}}
 </style>
 </head>
 <body>
@@ -217,8 +283,8 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
         <div><h2>Tische</h2><div class="pStat" id="pStat"></div></div>
         <div class="actions">
           <div class="pvSw" id="pvSw"><button data-pv="plan">Plan</button><button data-pv="liste">Liste</button></div>
-          <button id="pMulti">Tische zusammen</button>
-          <button id="pFree">Ohne Tisch / Abholung</button>
+          <button id="pMulti" class="mini">Tische zusammen</button>
+          <button id="pFree" class="mini">Ohne Tisch / Abholung</button>
         </div>
       </div>
       <div class="bar" id="pMultiBar" hidden>
@@ -242,14 +308,16 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
     <div class="tHead">
       <button id="tBack">← Tischplan</button>
       <h2 id="tTitle"></h2>
-      <button id="tMove">Tisch wechseln</button>
+      <button id="tMove" class="mini">Tisch wechseln</button>
     </div>
     <div class="tSw" id="tSw"><button data-tp="karte">↑ Speisekarte</button><button data-tp="rechnung">↓ Rechnung</button></div>
     <div class="grid" id="tGrid" style="margin-top:14px">
-      <div class="panel">
+      <div class="panel" id="menuPanel">
         <div class="gangSel gangTop"><span class="note">Neue Speisen in:</span><div class="seg" id="gSel"></div></div>
-        <div class="seg" id="cats"></div>
-        <div class="items" id="items"></div>
+        <div class="menuBody">
+          <div id="cats"></div>
+          <div class="items" id="items"></div>
+        </div>
       </div>
       <div class="panel sticky">
         <div id="side" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -436,7 +504,7 @@ function occupancy(){const map={};for(const k of openLabels())for(const id of ta
 let view="plan",cur=null,mode="order";
 const VIEWS=["plan","tisch","bons","karte","einst"];
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
-function show(v){view=v;const tv=v==="tisch"?"plan":v;
+function show(v){view=v;document.body.dataset.view=v;const tv=v==="tisch"?"plan":v;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===tv));
   VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
   if(v==="plan")renderPlan(); if(v==="tisch")renderTisch(); if(v==="bons")renderHist(); if(v==="karte")renderEditor(); if(v==="einst")renderSettings();
@@ -535,7 +603,7 @@ window.addEventListener("resize",()=>{if(view==="plan")fitPlan();fitT();});
 function fitT(){const g=$("tGrid");if(!g)return;
   if(view!=="tisch"||innerWidth<=600){g.style.removeProperty("--tH");return;}
   const top=g.getBoundingClientRect().top+scrollY;
-  const below=Math.max(0,document.documentElement.scrollHeight-(top+g.offsetHeight));
+  const below=Math.max(0,document.body.offsetHeight-(top+g.offsetHeight));
   g.style.setProperty("--tH",Math.max(320,Math.floor(innerHeight-top-below-4))+"px");}
 window.addEventListener("orientationchange",()=>setTimeout(fitT,300));
 function renderPlan(){const map=occupancy(),labels=openLabels();
@@ -565,16 +633,29 @@ $("pFreeName").onkeydown=e=>{if(e.key==="Enter")$("pFreeOk").click();};
 
 /* ---------- Tisch: Speisekarte ---------- */
 let cat=0;
+/* Farbe je Kategorie: Getränke kühl, Speisen warm, Extras/Divers grau */
+const CAT_COL={"Softdrinks":[205,60],"Homemade & Smoothies":[168,50],"Kaffee & Tee":[30,40],"Bier, Wein & Bar":[272,45],
+  "Vorspeisen":[46,75],"Hauptspeisen":[6,60],"Vegan Bowls & Kids":[122,40],"Nachspeisen":[325,50],"Extras":[0,0],"Divers":[220,8]};
+const CAT_LBL={drink:"Getränke",food:"Speisen",misc:"Extras & Divers"};
+const catKind=n=>DRINKS.includes(n)?"drink":(n==="Extras"||n==="Divers")?"misc":"food";
+function catStyle(n){let c=CAT_COL[n];if(!c){let x=0;for(const ch of String(n))x=(x*31+ch.charCodeAt(0))%360;c=[x,50];}
+  return `--h:${c[0]};--s:${c[1]}%`;}
 function priceText(it){return it.variants.map(v=>(v.label?v.label+" ":"")+eur(v.price)).join(" · ");}
 function renderGang(){const gs=$("gSel");if(!gs)return;gs.textContent="";
   [1,2,3].forEach(g=>{const b=document.createElement("button");b.textContent=g+". Gang";if(g===gangSel)b.className="on";
     b.onclick=()=>{gangSel=g;renderGang();};gs.append(b);});}
 function renderMenu(){renderGang();
   if(cat>=menu.length)cat=0;
-  const cb=$("cats");cb.textContent="";
-  menu.forEach((c,i)=>{const b=document.createElement("button");b.textContent=c.name;if(i===cat)b.classList.add("on");b.onclick=()=>{cat=i;renderMenu();};cb.append(b);});
+  const cb=$("cats"),keepY=cb.scrollTop;cb.textContent="";
+  /* Getränke, Speisen, Extras/Divers jeweils als eigene Gruppe mit Abstand */
+  const grps=[];
+  menu.forEach((c,i)=>{const k=catKind(c.name);let g=grps.find(x=>x.k===k);
+    if(!g){g={k,el:document.createElement("div")};g.el.className="catGrp";g.el.innerHTML=`<div class="catLbl">${CAT_LBL[k]}</div>`;grps.push(g);}
+    const b=document.createElement("button");b.textContent=c.name;b.style.cssText=catStyle(c.name);if(i===cat)b.classList.add("on");
+    b.onclick=()=>{cat=i;renderMenu();$("items").scrollTop=0;};g.el.append(b);});
+  grps.forEach(g=>cb.append(g.el));cb.scrollTop=keepY;
   const ib=$("items");ib.textContent="";
-  const c=menu[cat];if(!c)return;
+  const c=menu[cat];if(!c)return;ib.style.cssText=catStyle(c.name);
   if(!c.items.length)ib.innerHTML=`<div class="empty">Keine Gerichte in dieser Kategorie.</div>`;
   c.items.forEach(it=>{if(!it.variants.length)return;const b=document.createElement("button");b.className="item";
     b.innerHTML=`<span class="nm">${it.nr?`<span class="nr">${esc(it.nr)}.</span>`:""}${esc(it.name)}</span><span class="pr">${esc(priceText(it))}</span>`;
@@ -647,10 +728,10 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
     <button id="tSwMore" class="tSwMore">+ Artikel aus der Speisekarte</button>
     <div class="lines" id="lines"></div>
     <div class="sum"><span>Gesamt</span><span>${eur((t?total(t):0)+sumL(dr))}</span></div>
-    <div class="actions">${dr.length?`<button id="dClear" class="danger">Neue verwerfen</button>`:""}
+    <div class="actions">${dr.length?`<button id="dClear" class="danger mini">Neue verwerfen</button>`:""}
       <button id="dBook" class="primary big" ${dr.length?"":"disabled"}>${dr.length?"Bonieren ("+dr.reduce((a,l)=>a+l.qty,0)+")":"Bonieren"}</button></div>
     <div class="actions"><button id="toPay" class="big grow" ${t&&!dr.length?"":"disabled"}>Abrechnen</button></div>
-    ${t&&t.lines.length?`<div class="actions"><button id="toMoveItems" class="grow">⇄ Artikel auf anderen Tisch</button></div>`:""}
+    ${t&&t.lines.length?`<div class="actions"><button id="toMoveItems" class="mini">⇄ Artikel auf anderen Tisch</button></div>`:""}
     ${t&&dr.length?`<p class="note">Zum Abrechnen erst die neuen Artikel bonieren.</p>`:""}`;
   const box=$("lines");
   if(!t&&!dr.length)box.innerHTML=`<div class="empty">Noch nichts bestellt. Links Gerichte antippen.</div>`;
@@ -688,7 +769,7 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
     if(b.textContent!=="Wirklich verwerfen?"){b.textContent="Wirklich verwerfen?";setTimeout(()=>{if(b.isConnected)b.textContent="Neue verwerfen";},3000);return;}
     delete drafts[cur];saveDrafts();say("");renderSide();};
   $("dBook").onclick=book;
-  $("toPay").onclick=()=>{if(!tabs[cur]||draftOf(cur).length)return;mode="pay";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();};
+  $("toPay").onclick=startPay;
   if($("tSwMore"))$("tSwMore").onclick=()=>setPane("karte");
   if($("toMoveItems"))$("toMoveItems").onclick=openItemMove;
   updSw();}
@@ -713,49 +794,66 @@ function callGang(label,g){const t=tabs[label];if(!t)return;
     t.called=[...new Set([...(t.called||[]),g])];saveTabs();
     if(view==="tisch"&&cur===label&&mode==="order")renderSide();say(g+". Gang abgerufen.","ok");});}
 
-/* Abrechnen: alles vorausgewählt, für getrennt zahlen Anzahl anpassen */
-let pay=[],disc=0,armed="";
+/* Abrechnen: „Alles zusammen“ (alles ausgewählt) oder „Getrennt zahlen“ (erst auswählen, nichts vorausgewählt).
+   Nach einer Teilrechnung bleibt die Abrechnung offen – direkt den nächsten Gast auswählen. */
+let pay=[],disc=0,armed="",split=false,payDone="";
+function startPay(){if(!tabs[cur]||draftOf(cur).length)return;mode="pay";split=false;payDone="";pay=tabs[cur].lines.map(l=>l.qty);disc=0;armed="";say("");renderPay();}
 function renderPay(){const d=$("side"),t=tabs[cur];if(!t){mode="order";return renderSide();}
-  if(pay.length!==t.lines.length)pay=t.lines.map(l=>l.qty);
-  const sub=t.lines.reduce((s,l,i)=>s+pay[i]*l.price,0),dv=Math.round(sub*disc/100);
-  d.innerHTML=`<div class="sideHead"><h2>Abrechnen ${esc(t.label)}</h2><button id="tBackOrder">← Bestellung</button></div>
-  <p class="note">Alles ist ausgewählt. Für getrennt zahlen die Anzahl pro Position anpassen – der Rest bleibt am Tisch offen.</p>
+  if(pay.length!==t.lines.length)pay=t.lines.map(l=>split?0:l.qty);
+  const sub=t.lines.reduce((s,l,i)=>s+pay[i]*l.price,0),dv=Math.round(sub*disc/100),open=total(t),cnt=pay.reduce((a,b)=>a+b,0);
+  d.innerHTML=`<div class="sideHead"><h2>Abrechnen ${esc(t.label)}</h2><button id="tBackOrder" class="mini">← Bestellung</button></div>
+  <div class="payMode"><button id="pmAll" class="${split?"":"on"}">Alles zusammen</button><button id="pmSplit" class="${split?"on":""}">Getrennt zahlen</button></div>
+  ${split?`<div class="payHint">${cnt?"Ausgewählt: "+cnt+" Artikel – weitere antippen oder Rechnung ziehen.":(payDone?esc(payDone)+"<br>":"")+"Antippen, was dieser Gast zahlt."}</div>`:""}
   <div id="tLines"></div>
-  <div class="actions"><button id="tAll">Alles</button><button id="tNone">Nichts</button></div>
+  ${split?`<div class="actions"><button id="tAll" class="mini">Rest komplett</button><button id="tNone" class="mini" ${cnt?"":"disabled"}>Auswahl leeren</button></div>`:""}
   <div><div class="note" style="margin-bottom:6px">Rabatt</div><div class="seg" id="tDisc"></div></div>
-  <div class="tsum"><span>Auswahl</span><span>${eur(sub)}</span></div>
-  ${disc?`<div class="tsum"><span>Rabatt ${disc} %</span><span>-${eur(dv)}</span></div>`:""}
-  <div class="tsum big"><span>Zu zahlen</span><span>${eur(sub-dv)}</span></div>
-  <div class="actions"><button id="tPaid">Ohne Druck abrechnen</button><button id="tBill" class="primary big">Rechnung drucken</button></div>
-  <div class="actions"><button id="tKitchen">Bon nachdrucken</button></div>`;
+  <div class="payFoot">
+  ${split?`<div class="tsum rest"><span>Noch offen am Tisch</span><span>${eur(open)}</span></div>`:""}
+  ${disc?`<div class="tsum"><span>Rabatt ${disc} % von ${eur(sub)}</span><span>-${eur(dv)}</span></div>`:""}
+  <div class="tsum big"><span>${split?"Auswahl zahlen":"Zu zahlen"}</span><span>${eur(sub-dv)}</span></div>
+  <div class="actions"><button id="tBill" class="primary big grow" ${cnt?"":"disabled"}>${split?(cnt?"Rechnung für Auswahl drucken":"Erst Artikel auswählen"):"Rechnung drucken"}</button></div>
+  <div class="actions"><button id="tPaid" class="mini" ${cnt?"":"disabled"}>Ohne Druck abrechnen</button><button id="tKitchen" class="mini" ${cnt?"":"disabled"}>Bon nachdrucken</button></div>
+  </div>`;
   $("tBackOrder").onclick=()=>{mode="order";say("");renderSide();};updSw();
+  $("pmAll").onclick=()=>{split=false;pay=t.lines.map(l=>l.qty);armed="";renderPay();};
+  $("pmSplit").onclick=()=>{split=true;pay=t.lines.map(()=>0);armed="";renderPay();};
   const lb=$("tLines");
-  t.lines.forEach((l,i)=>{const r=document.createElement("div");r.className="pl"+(pay[i]?"":" off");
-    const q=document.createElement("div");q.className="q";
-    const m=document.createElement("button");m.textContent="−";m.onclick=()=>{if(pay[i]>0)pay[i]--;renderPay();};
-    const c=document.createElement("b");c.textContent=pay[i]+"/"+l.qty;
-    const p=document.createElement("button");p.textContent="+";p.onclick=()=>{if(pay[i]<l.qty)pay[i]++;renderPay();};
-    q.append(m,c,p);
+  t.lines.forEach((l,i)=>{const r=document.createElement("div");
     const nm=document.createElement("div");nm.innerHTML=`<b>${esc(lineName(l))}</b>${l.note?`<div class="note">${esc(l.note)}</div>`:""}`;
-    const pr=document.createElement("div");pr.className="p";pr.textContent=eur(pay[i]*l.price);
     const x=document.createElement("button");x.className="x danger";x.textContent=armed==="del"+i?"Storno?":"✕";x.setAttribute("aria-label","Stornieren");
-    x.onclick=()=>{if(armed!=="del"+i){armed="del"+i;renderPay();return;}armed="";
-      if(l.qty>1)l.qty--;else t.lines.splice(i,1);pay=t.lines.map(z=>z.qty);
+    x.onclick=e=>{e.stopPropagation();if(armed!=="del"+i){armed="del"+i;renderPay();return;}armed="";
+      if(l.qty>1){l.qty--;pay[i]=split?Math.min(pay[i],l.qty):l.qty;}else{t.lines.splice(i,1);pay.splice(i,1);}
       if(!t.lines.length){delete tabs[cur];saveTabs();show("plan");return say(`${cur}: alles storniert, Tisch frei.`,"ok",$("pMsg"));}
       saveTabs();renderPay();};
-    r.append(q,nm,pr,x);lb.append(r);});
+    if(!split){r.className="pl";
+      const q=document.createElement("span");q.className="qn";q.textContent=l.qty+"×";
+      const pr=document.createElement("div");pr.className="p";pr.textContent=eur(l.qty*l.price);
+      r.append(q,nm,pr,x);lb.append(r);return;}
+    /* getrennt: Zeile antippen = 1 mehr auswählen */
+    r.className="pl pick"+(pay[i]?" sel":" off");
+    r.onclick=()=>{if(pay[i]<l.qty){pay[i]++;armed="";renderPay();}};
+    const q=document.createElement("div");q.className="q";
+    const m=document.createElement("button");m.textContent="−";m.disabled=!pay[i];m.onclick=e=>{e.stopPropagation();if(pay[i]>0)pay[i]--;renderPay();};
+    const c=document.createElement("b");c.textContent=pay[i]+"/"+l.qty;
+    const p=document.createElement("button");p.textContent="+";p.disabled=pay[i]>=l.qty;p.onclick=e=>{e.stopPropagation();if(pay[i]<l.qty)pay[i]++;renderPay();};
+    q.append(m,c,p);
+    const pr=document.createElement("div");pr.className="p";pr.textContent=eur((pay[i]||l.qty)*l.price);
+    r.append(nm,q,pr,x);lb.append(r);});
   const ds=$("tDisc");[0,5,10,20].forEach(v=>{const b=document.createElement("button");b.textContent=v?v+" %":"kein";
     if(v===disc)b.classList.add("on");b.onclick=()=>{disc=v;renderPay();};ds.append(b);});
-  $("tAll").onclick=()=>{pay=t.lines.map(l=>l.qty);renderPay();};
-  $("tNone").onclick=()=>{pay=t.lines.map(()=>0);renderPay();};
+  if($("tAll"))$("tAll").onclick=()=>{pay=t.lines.map(l=>l.qty);renderPay();};
+  if($("tNone"))$("tNone").onclick=()=>{pay=t.lines.map(()=>0);renderPay();};
   const selection=()=>t.lines.map((l,i)=>Object.assign(clone(l),{qty:pay[i]})).filter(l=>l.qty>0);
-  const settle=(sel,when,printed)=>{const label=t.label,d0=disc;
+  const settle=(sel,when,printed)=>{const label=t.label,d0=disc,paid=sumL(sel)-Math.round(sumL(sel)*d0/100);
     t.lines.forEach((l,i)=>l.qty-=pay[i]);t.lines=t.lines.filter(l=>l.qty>0);
     hist.unshift({at:when.toISOString(),label,lines:sel,discount:d0});hist=hist.slice(0,1000);save("bons",hist);
     disc=0;armed="";
     if(!t.lines.length){delete tabs[cur];saveTabs();show("plan");
-      return say(`${label} abgerechnet (${eur(sumL(sel)-Math.round(sumL(sel)*d0/100))})${printed?" – Rechnung gedruckt":""}. Tisch ist frei.`,"ok",$("pMsg"));}
-    saveTabs();pay=t.lines.map(l=>l.qty);renderPay();say((printed?"Teilrechnung gedruckt":"Teil abgerechnet")+" – Rest bleibt offen.","ok");};
+      return say(`${label} abgerechnet (${eur(paid)})${printed?" – Rechnung gedruckt":""}. Tisch ist frei.`,"ok",$("pMsg"));}
+    /* Rest bleibt offen, Abrechnung bleibt geöffnet: nächsten Gast auswählen */
+    payDone=`✓ ${printed?"Teilrechnung gedruckt":"Teil abgerechnet"}: ${eur(paid)}`;
+    saveTabs();split=true;pay=t.lines.map(()=>0);renderPay();
+    say(`${printed?"Teilrechnung gedruckt":"Teil abgerechnet"} (${eur(paid)}). Jetzt den nächsten Gast auswählen.`,"ok");};
   $("tBill").onclick=()=>{const sel=selection();if(!sel.length)return say("Nichts ausgewählt.","err");
     const when=new Date(),dd=disc;$("tBill").disabled=true;say("Rechnung wird gedruckt …");
     sendPrint({label:t.label,lines:sel,discount:dd},when,(ok,err)=>{if(!ok){if($("tBill"))$("tBill").disabled=false;return say("Drucken fehlgeschlagen ("+err+").","err");}
