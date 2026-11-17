@@ -376,12 +376,14 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.datase
 function show(v){view=v;document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   ["tag","woche","plan","gaeste","einst"].forEach(x=>$("v-"+x).hidden=x!==v);
   if(v==="tag")renderDay(); if(v==="woche")renderWeek(); if(v==="plan")renderEditor(); if(v==="gaeste")renderGuests(); if(v==="einst")renderSettings();}
-window.onBack=()=>{if(view!=="tag")show("tag");else if(editId)resetForm();};
+window.onBack=()=>{if(view!=="tag")show("tag");else if(editId){resetForm();goToday();}};
 
 /* ---------- Tag ---------- */
 $("dPrev").onclick=()=>{day=addDays(day,-1);syncFormDate();renderDay();};
 $("dNext").onclick=()=>{day=addDays(day,1);syncFormDate();renderDay();};
 $("dToday").onclick=()=>{day=todayIso();syncFormDate();renderDay();};
+/* Zurück zum heutigen Tag (nach Reservierung fertig / App-Wechsel) */
+function goToday(){day=todayIso();if(view!=="tag")show("tag");if(!editId)$("fDate").value=day;renderTables();renderDay();}
 function syncFormDate(){if(!editId){$("fDate").value=day;renderTables();}}
 const dayRes=d=>res.filter(r=>r.date===d).sort((a,b)=>a.time.localeCompare(b.time)||a.created.localeCompare(b.created));
 
@@ -497,10 +499,10 @@ function editRes(id){const r=res.find(x=>x.id===id);if(!r)return;editId=id;guest
   $("fNote").value=r.note||"";$("fStatus").value=r.status;$("formTitle").textContent="Reservierung bearbeiten";
   $("fCancel").hidden=false;$("fDelete").hidden=false;$("fDelete").textContent="Löschen";$("sugg").textContent="";
   setHigh();setWish();showGuestInfo();renderTables();renderDay();say("");window.scrollTo({top:0,behavior:"smooth"});}
-$("fCancel").onclick=()=>{resetForm();say("");};
+$("fCancel").onclick=()=>{resetForm();goToday();say("");};
 $("fDelete").onclick=()=>{const b=$("fDelete");
   if(b.textContent!=="Wirklich löschen?"){b.textContent="Wirklich löschen?";return;}
-  res=res.filter(r=>r.id!==editId);persist();resetForm();say("Reservierung gelöscht.","ok");};
+  res=res.filter(r=>r.id!==editId);persist();resetForm();goToday();say("Reservierung gelöscht.","ok");};
 
 $("form").addEventListener("submit",e=>{e.preventDefault();
   const date=$("fDate").value,time=$("fTime").value,name=$("fName").value.trim(),phone=$("fPhone").value.trim(),
@@ -531,7 +533,7 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   if(editId){Object.assign(res.find(r=>r.id===editId),data);}
   else res.push({id:uid(),created:now,...data});
   if(!persist())return;
-  day=date;const wasEdit=!!editId;resetForm();
+  const wasEdit=!!editId;resetForm();goToday();
   say(`${wasEdit?"Geändert":"Gespeichert"}: ${short(date)} ${time} – ${name}, ${persons} P.`,"ok");});
 
 /* ---------- Woche ---------- */
@@ -779,7 +781,7 @@ let tt=null;const toast=(t,k)=>{toastEl.textContent=t;toastEl.className=k||"";to
 
 const openD=()=>{drawer.hidden=false;$("rdTitle").textContent=editId?"Reservierung ändern":"Neue Reservierung";};
 const closeD=()=>{drawer.hidden=true;};
-$("rdClose").onclick=()=>{resetForm();say("");};
+$("rdClose").onclick=()=>{resetForm();goToday();say("");};
 drawer.querySelectorAll(".rdTimeRow button").forEach(b=>b.onclick=()=>{if(wishLock())return say("Wunschtisch – Uhrzeit gesperrt. Erst „Wunschtisch“ abwählen.","err");const t=$("fTime").value||"18:00";
   let m=(mins(t)+parseInt(b.dataset.m)+1440)%1440;$("fTime").value=pad(Math.floor(m/60))+":"+pad(m%60);renderTables();});
 
@@ -959,7 +961,7 @@ function startMove(id){const r=res.find(x=>x.id===id);if(!r)return;
   mv={id,time:r.time,tables:[...r.tables],first:true};document.body.classList.add("mvMode");
   if($("fDate").value!==r.date){day=r.date;$("fDate").value=r.date;renderDay();}
   bar=document.createElement("div");bar.id="mvBar";document.body.append(bar);drawBar();renderTables();}
-function stopMove(){mv=null;document.body.classList.remove("mvMode");if(bar){bar.remove();bar=null;}renderTables();renderDay();}
+function stopMove(){mv=null;document.body.classList.remove("mvMode");if(bar){bar.remove();bar=null;}goToday();}
 function conflicts(){const r=res.find(x=>x.id===mv.id),b=busyTables(r.date,mv.time,r.id,durOf(r));return mv.tables.filter(t=>b[t]).map(t=>"Tisch "+t+": "+b[t]);}
 function drawBar(){const r=res.find(x=>x.id===mv.id);if(!r)return stopMove();const cf=conflicts();
   const seats=cfg.tables.filter(t=>mv.tables.includes(t.id)).reduce((s,t)=>s+(t.seats||0),0);
@@ -1070,6 +1072,15 @@ function makeDraggable(){
 /* um Mitternacht (und beim Öffnen) zurück auf den Grundplan */
 setInterval(expire,60*1000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)expire();});
+/* Nach Wechsel in eine andere App: zurück auf heute – außer eine Reservierung wird gerade eingegeben oder verschoben */
+(function(){let away=false;
+  const back=()=>{if(!away)return;away=false;
+    const d=document.getElementById("resDrawer");
+    if((d&&!d.hidden)||document.body.classList.contains("mvMode"))return;
+    goToday();};
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)away=true;else back();});
+  window.addEventListener("pagehide",()=>{away=true;});
+  window.addEventListener("pageshow",e=>{if(e.persisted){away=true;back();}});})();
 expire();renderTables();
 })();
 </script>
