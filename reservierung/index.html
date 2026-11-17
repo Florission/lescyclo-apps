@@ -131,6 +131,10 @@ td.num{font-family:var(--font-num);text-align:right}
 .tbl .s{white-space:pre-line;line-height:1.15;text-align:center;overflow:hidden}
 input.miss{border:2px solid var(--danger);background:var(--danger-soft)}
 .fErr{color:var(--danger);font-size:14px;font-weight:700}
+.wishBtn{width:100%;margin-top:8px;font-weight:700;border:2px dashed #d9a400;background:var(--surface);color:var(--fg)}
+.wishBtn.on{background:#ffe9a8;color:#3d2f00;border:2px solid #d9a400}
+.wishLock{font-size:14px;color:#7a5a00;font-weight:600;margin-top:4px}
+#tables .chip:disabled,input:disabled{opacity:.6;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -184,6 +188,8 @@ input.miss{border:2px solid var(--danger);background:var(--danger-soft)}
         <div>
           <label style="margin-bottom:4px">Tisch(e)</label>
           <div id="tables"></div>
+          <button type="button" id="fWish" class="wishBtn" aria-pressed="false">☆ Wunschtisch</button>
+          <div class="wishLock" id="wishLock" hidden>🔒 Wunschtisch: Tisch, Datum und Uhrzeit sind gesperrt. Zum Verschieben „Wunschtisch“ abwählen.</div>
         </div>
         <div class="warnbox" id="capWarn" hidden></div>
         <label>Notiz<textarea id="fNote" placeholder="z. B. Geburtstag, Fensterplatz"></textarea></label>
@@ -365,7 +371,7 @@ function say(t,k,el){const m=el||$("msg");m.textContent=t;m.className="msg "+(k|
 window.onMsg=s=>{const k=s.startsWith("ok:")?"ok":"err";say(s.slice(s.indexOf(":")+1),k,$("bMsg"));};
 
 /* ---------- Ansichten ---------- */
-let view="tag", day=todayIso(), editId=null, guestSel=null, high=false, selTables=[];
+let view="tag", day=todayIso(), editId=null, guestSel=null, high=false, wish=false, selTables=[];
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
 function show(v){view=v;document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   ["tag","woche","plan","gaeste","einst"].forEach(x=>$("v-"+x).hidden=x!==v);
@@ -400,6 +406,7 @@ function renderDay(){
     const m=document.createElement("div");m.className="meta";
     const parts=[];
     if(r.tables.length)parts.push(`<span class="tag">${r.tables.map(esc).join(", ")}</span>`);
+    if(r.wish)parts.push(`<span class="tag" style="background:#ffe9a8;border-color:#d9a400;color:#3d2f00">⭐ Wunschtisch</span>`);
     if(r.highchair)parts.push(`<span class="tag">Kinderstuhl</span>`);
     if(r.phone)parts.push(`<span>${esc(r.phone)}</span>`);
     if(r.contact)parts.push(`<span>Kontakt: ${esc(r.contact)}</span>`);
@@ -417,6 +424,12 @@ $("pPlus").onclick=()=>{$("fPers").value=(parseInt($("fPers").value)||0)+1;rende
 $("fPers").oninput=()=>renderTables();
 $("fHigh").querySelectorAll("button").forEach(b=>b.onclick=()=>{high=b.dataset.h==="1";setHigh();});
 function setHigh(){$("fHigh").querySelectorAll("button").forEach(b=>b.classList.toggle("on",(b.dataset.h==="1")===high));}
+/* Wunschtisch: gespeicherte Reservierung mit Wunschtisch darf nicht verschoben werden, solange der Button an ist */
+function wishLock(){if(!editId||!wish)return false;const r=res.find(x=>x.id===editId);return !!(r&&r.wish);}
+function setWish(){const b=$("fWish");b.classList.toggle("on",wish);b.setAttribute("aria-pressed",wish);
+  b.textContent=wish?"⭐ Wunschtisch (fest)":"☆ Wunschtisch";const L=wishLock();
+  $("wishLock").hidden=!L;$("fDate").disabled=L;$("fTime").disabled=L;}
+$("fWish").onclick=()=>{wish=!wish;setWish();renderTables();};
 $("fDate").onchange=()=>renderTables();$("fTime").onchange=()=>renderTables();
 
 function busyTables(date,time,exceptId,dur){
@@ -436,7 +449,8 @@ function renderTables(){
       b.textContent=t.id+(t.seats?` (${t.seats})`:"");
       if(busy[t.id]){b.classList.add("busy");b.title="belegt: "+busy[t.id];b.textContent+=" · belegt";}
       if(selTables.includes(t.id))b.classList.add("on");
-      b.onclick=()=>{selTables=selTables.includes(t.id)?selTables.filter(x=>x!==t.id):[...selTables,t.id];renderTables();};
+      if(wishLock())b.disabled=true;
+      b.onclick=()=>{if(wishLock())return;selTables=selTables.includes(t.id)?selTables.filter(x=>x!==t.id):[...selTables,t.id];renderTables();};
       ch.append(b);}
     box.append(ch);}
   // Warnungen
@@ -472,17 +486,17 @@ function showGuestInfo(){const g=guests.find(x=>x.id===guestSel),el=$("guestInfo
 $("fName").oninput=()=>{const g=guests.find(x=>x.id===guestSel);if(g&&g.name!==$("fName").value)guestSel=null;$("guestInfo").hidden=!guestSel;suggest();};
 $("fPhone").oninput=()=>{suggest();};
 
-function resetForm(){editId=null;guestSel=null;high=false;selTables=[];
+function resetForm(){editId=null;guestSel=null;high=false;wish=false;selTables=[];
   $("form").reset();$("fDate").value=day;$("fTime").value="18:00";$("fPers").value=2;$("fStatus").value="bestaetigt";
   $("formTitle").textContent="Neue Reservierung";$("fCancel").hidden=true;$("fDelete").hidden=true;$("fDelete").textContent="Löschen";
   $("sugg").textContent="";$("guestInfo").hidden=true;
   ["fName","fPhone","fContact"].forEach(id=>$(id).classList.remove("miss"));$("eName").hidden=true;$("eContact").hidden=true;
-  setHigh();renderTables();renderDay();}
-function editRes(id){const r=res.find(x=>x.id===id);if(!r)return;editId=id;guestSel=r.guestId||null;high=!!r.highchair;selTables=[...r.tables];
+  setHigh();setWish();renderTables();renderDay();}
+function editRes(id){const r=res.find(x=>x.id===id);if(!r)return;editId=id;guestSel=r.guestId||null;high=!!r.highchair;wish=!!r.wish;selTables=[...r.tables];
   $("fDate").value=r.date;$("fTime").value=r.time;$("fName").value=r.name;$("fPhone").value=r.phone||"";$("fContact").value=r.contact||"";$("fPers").value=r.persons;
   $("fNote").value=r.note||"";$("fStatus").value=r.status;$("formTitle").textContent="Reservierung bearbeiten";
   $("fCancel").hidden=false;$("fDelete").hidden=false;$("fDelete").textContent="Löschen";$("sugg").textContent="";
-  setHigh();showGuestInfo();renderTables();renderDay();say("");window.scrollTo({top:0,behavior:"smooth"});}
+  setHigh();setWish();showGuestInfo();renderTables();renderDay();say("");window.scrollTo({top:0,behavior:"smooth"});}
 $("fCancel").onclick=()=>{resetForm();say("");};
 $("fDelete").onclick=()=>{const b=$("fDelete");
   if(b.textContent!=="Wirklich löschen?"){b.textContent="Wirklich löschen?";return;}
@@ -501,6 +515,8 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   if(miss.length){(name?(phone?$("fContact"):$("fPhone")):$("fName")).focus();
     return say("Nicht gespeichert – es fehlt: "+miss.join(" und ")+".","err");}
   if(!(persons>0))return say("Bitte die Personenzahl angeben.","err");
+  if(wishLock()){const o=res.find(x=>x.id===editId);
+    if(o.date!==date||o.time!==time||o.tables.join()!==selTables.join())return say("Nicht gespeichert: Wunschtisch – die Reservierung darf nicht verschoben werden. Erst „Wunschtisch“ abwählen.","err");}
   if(!["storniert","noshow"].includes($("fStatus").value)){
     const busyNow=busyTables(date,time,editId,durFor(persons)), clash=selTables.filter(t=>busyNow[t]);
     if(clash.length)return say("Nicht gespeichert: Tisch "+clash.join(", ")+" ist von "+time+" bis "+endOf(time,durFor(persons))+" schon belegt ("+clash.map(t=>busyNow[t]).join("; ")+"). Bitte andere Uhrzeit oder anderen Tisch wählen.","err");}
@@ -511,7 +527,7 @@ $("form").addEventListener("submit",e=>{e.preventDefault();
   if(!g){g={id:uid(),name,phone,contact,note:"",created:new Date().toISOString()};guests.push(g);}
   else{g.name=name;if(phone)g.phone=phone;if(contact)g.contact=contact;}
   const now=new Date().toISOString();
-  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,dur:durFor(persons),contact,updated:now};
+  const data={date,time,name,phone,persons,tables:[...selTables],highchair:high,wish:wish,note:$("fNote").value.trim(),status:$("fStatus").value,guestId:g.id,dur:durFor(persons),contact,updated:now};
   if(editId){Object.assign(res.find(r=>r.id===editId),data);}
   else res.push({id:uid(),created:now,...data});
   if(!persist())return;
@@ -764,7 +780,7 @@ let tt=null;const toast=(t,k)=>{toastEl.textContent=t;toastEl.className=k||"";to
 const openD=()=>{drawer.hidden=false;$("rdTitle").textContent=editId?"Reservierung ändern":"Neue Reservierung";};
 const closeD=()=>{drawer.hidden=true;};
 $("rdClose").onclick=()=>{resetForm();say("");};
-drawer.querySelectorAll(".rdTimeRow button").forEach(b=>b.onclick=()=>{const t=$("fTime").value||"18:00";
+drawer.querySelectorAll(".rdTimeRow button").forEach(b=>b.onclick=()=>{if(wishLock())return say("Wunschtisch – Uhrzeit gesperrt. Erst „Wunschtisch“ abwählen.","err");const t=$("fTime").value||"18:00";
   let m=(mins(t)+parseInt(b.dataset.m)+1440)%1440;$("fTime").value=pad(Math.floor(m/60))+":"+pad(m%60);renderTables();});
 
 const _say=say;say=function(t,k,el){_say(t,k,el);if(t&&(!el||el===$("msg"))&&drawer.hidden)toast(t,k==="err"?"err":"");};
@@ -784,11 +800,12 @@ function decorate(){const date=$("fDate").value;
     const list=res.filter(r=>r.date===date&&active(r)&&r.tables.includes(id)).sort((a,b)=>a.time.localeCompare(b.time));
     if(list.length){const box=document.createElement("div");box.className="rchips";
       for(const r of list){const c=document.createElement("button");c.type="button";c.className="rchip"+(r.id===editId?" on":"");
-        c.textContent=r.time+" "+String(r.name).split(" ")[0]+" ("+r.persons+")";c.title=r.time+"–"+endOf(r.time,durOf(r))+" "+r.name+", "+r.persons+" P.";
+        c.textContent=(r.wish?"⭐":"")+r.time+" "+String(r.name).split(" ")[0]+" ("+r.persons+")";c.title=r.time+"–"+endOf(r.time,durOf(r))+" "+r.name+", "+r.persons+" P.";
         c.dataset.id=r.id;c.dataset.from=id;c.addEventListener("pointerdown",startDrag);box.append(c);}
       el.append(box);}
     el.onclick=e=>{if(e.target.closest(".rchip"))return;
       if(drawer.hidden){resetForm();selTables=[id];openD();renderTables();setTimeout(()=>$("fName").focus(),60);}
+      else if(wishLock())say("Wunschtisch – Tisch gesperrt. Erst „Wunschtisch“ abwählen.","err");
       else{selTables=selTables.includes(id)?selTables.filter(x=>x!==id):[...selTables,id];renderTables();}};
   });}
 
@@ -799,7 +816,8 @@ function startDrag(e){e.stopPropagation();e.preventDefault();const c=e.currentTa
   window.addEventListener("pointermove",mv);window.addEventListener("pointerup",up,{once:true});window.addEventListener("pointercancel",cancel,{once:true});}
 function targetAt(x,y){const t=document.elementFromPoint(x,y);const el=t&&t.closest("#bookPlan .tbl");return el&&!el.classList.contains("deko")?el:null;}
 function mv(e){if(!dg)return;
-  if(!dg.moved&&Math.hypot(e.clientX-dg.x,e.clientY-dg.y)>8){dg.moved=true;dg.ghost=document.createElement("div");dg.ghost.className="rghost";dg.ghost.textContent=dg.label;document.body.append(dg.ghost);}
+  if(!dg.moved&&Math.hypot(e.clientX-dg.x,e.clientY-dg.y)>8){dg.moved=true;
+    const wr=res.find(x=>x.id===dg.id);if(wr&&wr.wish){toast("⭐ Wunschtisch – "+wr.name+" kann nicht verschoben werden.","err");return;}dg.ghost=document.createElement("div");dg.ghost.className="rghost";dg.ghost.textContent=dg.label;document.body.append(dg.ghost);}
   if(!dg.ghost)return;dg.ghost.style.left=e.clientX+10+"px";dg.ghost.style.top=e.clientY+10+"px";
   const el=targetAt(e.clientX,e.clientY);if(dg.over&&dg.over!==el)dg.over.classList.remove("dropT");if(el){el.classList.add("dropT");dg.over=el;}}
 function cleanup(){window.removeEventListener("pointermove",mv);if(dg){if(dg.ghost)dg.ghost.remove();if(dg.over)dg.over.classList.remove("dropT");}}
@@ -808,6 +826,7 @@ function up(e){cleanup();const d=dg;dg=null;if(!d)return;
   if(!d.moved){editRes(d.id);return;}
   const el=targetAt(e.clientX,e.clientY);if(!el)return;const to=el.querySelector(".n").textContent;
   const r=res.find(x=>x.id===d.id);if(!r||to===d.from)return;
+  if(r.wish)return;
   if(r.tables.includes(to))return toast("Die Reservierung liegt schon auf Tisch "+to+".","err");
   const busy=busyTables(r.date,r.time,r.id,durOf(r));
   if(busy[to])return toast("Tisch "+to+" ist dann schon belegt ("+busy[to]+").","err");
@@ -917,14 +936,15 @@ function openInfo(id,onNew){closeInfo();const date=$("fDate").value,t=cfg.tables
     const gi=groups.findIndex(x=>x.id===r.id),g=guests.find(x=>x.id===r.guestId);
     const meta=[];
     if(r.phone)meta.push("📞 "+esc(r.phone));if(r.contact)meta.push("✉ "+esc(r.contact));
+    if(r.wish)meta.push("<b style=\"color:#7a5a00\">⭐ Wunschtisch – nicht verschiebbar</b>");
     if(r.highchair)meta.push("Kinderstuhl");if(r.note)meta.push("Notiz: "+esc(r.note));
     if(g&&g.note)meta.push("Gast: "+esc(g.note));meta.push(STATUS[r.status]);
     c.innerHTML=`<div class="tiTime">${esc(r.time)}–${esc(endOf(r.time,durOf(r)))} <span class="note" style="font-size:14px">(${durTxt(durOf(r))})</span></div>
       <div class="tiWho">${esc(r.name)} · ${r.persons} ${r.persons===1?"Person":"Personen"}</div>
       ${r.tables.length>1?`<div><span class="tiGrp" style="background:${COLORS[gi%COLORS.length]}">Tische ${r.tables.map(esc).join(" + ")} zusammen</span></div>`:""}
       <div class="tiMeta">${meta.map(x=>`<span>${x}</span>`).join("")}</div>
-      <div class="tiBtns"><button type="button" data-a="mv" class="primary">Verschieben</button><button type="button" data-a="ed">Ändern</button></div>`;
-    c.querySelector('[data-a="mv"]').onclick=()=>{closeInfo();startMove(r.id);};
+      <div class="tiBtns"><button type="button" data-a="mv" class="primary">${r.wish?"🔒 Wunschtisch abwählen":"Verschieben"}</button><button type="button" data-a="ed">Ändern</button></div>`;
+    c.querySelector('[data-a="mv"]').onclick=()=>{if(r.wish){r.wish=false;r.updated=new Date().toISOString();if(!persist())return;renderTables();renderDay();openInfo(id,onNew);say("Wunschtisch abgewählt – "+r.name+" ist wieder verschiebbar.","ok");return;}closeInfo();startMove(r.id);};
     c.querySelector('[data-a="ed"]').onclick=()=>{closeInfo();editRes(r.id);};
     bx.append(c);}
   const nb=document.createElement("button");nb.type="button";nb.className="tiNew";nb.textContent="+ Neue Reservierung an Tisch "+id;
@@ -934,6 +954,7 @@ function openInfo(id,onNew){closeInfo();const date=$("fDate").value,t=cfg.tables
 /* Verschieben: Uhrzeit ändern und/oder andere Tische antippen */
 let bar=null;
 function startMove(id){const r=res.find(x=>x.id===id);if(!r)return;
+  if(r.wish)return say("⭐ Wunschtisch – "+r.name+" kann nicht verschoben werden.","err");
   if(drawerOpen())resetForm();
   mv={id,time:r.time,tables:[...r.tables],first:true};document.body.classList.add("mvMode");
   if($("fDate").value!==r.date){day=r.date;$("fDate").value=r.date;renderDay();}
@@ -1088,6 +1109,7 @@ function listBytes(d){const pc=printerCfg(),W=pc.width,W2=Math.floor(W/2),ESC=0x
     sz(0x01);wrapT(r.name,W).forEach(x=>{n(x);nl();});sz(0);bold(0);
     const g=guests.find(x=>x.id===r.guestId),meta=[];
     if(r.phone)meta.push("Tel. "+r.phone);
+    if(r.wish)meta.push("WUNSCHTISCH");
     if(r.highchair)meta.push("Kinderstuhl");
     if(r.status==="da")meta.push("ist da");
     if(meta.length)wrapT(meta.join(" · "),W).forEach(x=>{n(x);nl();});
