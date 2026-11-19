@@ -1192,6 +1192,107 @@ window.resListBytes=listBytes;
 }
 </style>
 <script>
+/* ---------- Belegte Zeiten an den gewählten Tischen sperren ----------
+   Eine Anfangszeit ist gesperrt, wenn sich die neue Reservierung (mit ihrer Dauer)
+   mit einer anderen aktiven Reservierung an einem der gewählten Tische überschneiden würde. */
+(function(){
+const OPEN=12*60, LAST=21*60+30, STEP=15;
+const css=document.createElement("style");css.textContent=`
+#slotBox{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+#slotBox[hidden]{display:none}
+#slotHead{font-size:13px;font-weight:700;color:var(--fg)}
+#slotGrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+@media (max-width:420px){#slotGrid{grid-template-columns:repeat(4,1fr)}}
+#slotGrid button{min-height:38px;padding:2px;font-size:14px;font-weight:700;font-family:var(--font-num);background:var(--surface);
+  color:var(--fg);border:1px solid var(--line);border-radius:8px;min-width:0}
+#slotGrid button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+#slotGrid button:disabled{background:transparent;color:var(--muted);text-decoration:line-through;opacity:.5;border-style:dashed;cursor:not-allowed}
+#slotGrid button.bad{background:var(--danger);color:#fff;border-color:var(--danger);text-decoration:line-through}
+#slotBusy{font-size:13px;color:var(--danger);font-weight:600;line-height:1.35}
+#slotMsg{font-size:14px;font-weight:700;color:var(--danger)}
+#slotMsg.ok{color:var(--accent)}
+`;document.head.append(css);
+
+const hm=m=>pad(Math.floor(m/60)%24)+":"+pad(m%60);
+const curDur=()=>durFor(parseInt($("fPers").value)||0);
+const dTxt=d=>(d%60?Math.floor(d/60)+"½":d/60)+" Std.";
+/* belegte Zeiträume an den gewählten Tischen (ohne die gerade bearbeitete Reservierung) */
+function blocks(tables){const date=$("fDate").value;tables=tables||selTables;if(!date||!tables.length)return [];
+  return res.filter(r=>r.id!==editId&&r.date===date&&active(r)&&r.tables.some(t=>tables.includes(t)))
+    .map(r=>({s:mins(r.time),e:mins(r.time)+durOf(r),r})).sort((a,b)=>a.s-b.s);}
+const hit=(m,bl,d)=>bl.find(b=>b.s<m+d&&m<b.e);
+const bTxt=b=>hm(b.s)+"–"+hm(b.e)+" "+b.r.name+" ("+b.r.persons+")"+(b.r.tables.length>1?" Tisch "+b.r.tables.join("+"):"");
+/* nächste freie Zeit: erst später, dann früher */
+function nearestFree(m,bl,d){
+  for(let x=m;x<=Math.max(LAST,m);x+=STEP)if(!hit(x,bl,d))return x;
+  for(let x=m-STEP;x>=OPEN;x-=STEP)if(!hit(x,bl,d))return x;
+  return null;}
+const setT=m=>{$("fTime").value=hm(m);};
+
+/* Zeitraster in den Uhrzeit-Block der Seitenleiste */
+const rd=document.querySelector("#resDrawer .rdTime");if(!rd)return;
+const box=document.createElement("div");box.id="slotBox";box.hidden=true;
+box.innerHTML=`<div id="slotHead"></div><div id="slotGrid"></div><div id="slotBusy"></div><div id="slotMsg" role="status"></div>`;
+rd.append(box);
+
+let note=null,lastT=null;
+function renderSlots(){
+  if(!selTables.length){box.hidden=true;return;}box.hidden=false;
+  const bl=blocks(),d=curDur(),cur=$("fTime").value,L=wishLock(),g=$("slotGrid");
+  $("slotHead").textContent=`Anfangszeit an Tisch ${selTables.join(" + ")} (${dTxt(d)}) – durchgestrichen = belegt`;
+  g.textContent="";
+  for(let m=OPEN;m<=LAST;m+=STEP){const b=document.createElement("button");b.type="button";b.textContent=hm(m);
+    const h=hit(m,bl,d),on=hm(m)===cur;
+    if(on)b.classList.add("on");
+    if(h){b.title="belegt: "+bTxt(h);if(on)b.classList.add("bad");else b.disabled=true;}
+    if(L)b.disabled=true;
+    b.onclick=()=>{if(L||hit(m,blocks(),curDur()))return;note=null;setT(m);renderTables();};
+    g.append(b);}
+  $("slotBusy").textContent=bl.length?"Belegt: "+bl.map(bTxt).join(" · "):"";
+  const ch=cur&&hit(mins(cur),bl,d),msg=$("slotMsg");
+  if(ch){msg.className="";msg.textContent=`${cur} geht nicht – Tisch ist bis ${hm(ch.e)} belegt (${ch.r.name}). Bitte freie Zeit wählen.`;}
+  else if(note){msg.className=note.k||"";msg.textContent=note.t;note=null;}
+  else{msg.className="";msg.textContent="";}
+  if(cur&&!ch)lastT=cur;}
+
+/* Tische hinzufügen, die zur gewählten Zeit belegt sind, wird verhindert;
+   bei einer neuen Reservierung springt die Uhrzeit beim ersten Tisch auf die nächste freie Zeit */
+let lastEdit,lastSel=[];
+const _rt=renderTables;
+renderTables=function(){
+  if(editId===lastEdit&&!wishLock()){
+    const added=selTables.filter(t=>!lastSel.includes(t)),cur=$("fTime").value;
+    if(added.length&&cur){const d=curDur();
+      if(!lastSel.length&&!editId){const bl=blocks(),h=hit(mins(cur),bl,d);
+        if(h){const f=nearestFree(mins(cur),bl,d);
+          if(f!==null){setT(f);note={t:`${cur} ist an Tisch ${selTables.join("+")} belegt (${bTxt(h)}) – Uhrzeit auf ${hm(f)} gesetzt.`,k:"ok"};}
+          else note={t:`An Tisch ${selTables.join("+")} ist an diesem Tag keine Zeit mehr frei.`};}}
+      else{const bad=added.filter(t=>hit(mins(cur),blocks([t]),d));
+        if(bad.length){const h=hit(mins(cur),blocks(bad),d);selTables=selTables.filter(t=>!bad.includes(t));
+          note={t:`Tisch ${bad.join(", ")} ist um ${cur} belegt (${bTxt(h)}) – nicht hinzugefügt.`};}}}}
+  lastEdit=editId;lastSel=[...selTables];
+  const r=_rt.apply(this,arguments);renderSlots();return r;};
+
+/* −30/−15/+15/+30 überspringen belegte Zeiten */
+document.querySelectorAll("#resDrawer .rdTimeRow button").forEach(b=>b.onclick=()=>{
+  if(wishLock())return say("Wunschtisch – Uhrzeit gesperrt. Erst „Wunschtisch“ abwählen.","err");
+  const dm=parseInt(b.dataset.m),dir=Math.sign(dm),bl=blocks(),d=curDur();
+  let m=mins($("fTime").value||"18:00")+dm;
+  while(m>=0&&m<1440&&hit(m,bl,d))m+=dir*STEP;
+  if(m<0||m>=1440){note={t:"In diese Richtung ist keine Zeit mehr frei."};renderSlots();return;}
+  note=null;setT(m);renderTables();});
+
+/* Uhrzeit von Hand: belegte Zeit wird nicht übernommen */
+$("fTime").onchange=()=>{const cur=$("fTime").value,bl=blocks(),d=curDur(),h=cur&&hit(mins(cur),bl,d);
+  if(h){const back=lastT&&!hit(mins(lastT),bl,d)?mins(lastT):nearestFree(mins(cur),bl,d);
+    if(back!==null)setT(back);
+    note={t:`${cur} ist belegt (${bTxt(h)})`+(back!==null?` – Uhrzeit bleibt ${hm(back)}.`:".")};}
+  renderTables();};
+
+renderTables();
+})();
+</script>
+<script>
 /* Plan-Größe fürs Querformat: Seitenverhältnis und Abstand von oben merken */
 (function(){
 function fitBook(){const b=$("bookPlan");if(!b)return;
