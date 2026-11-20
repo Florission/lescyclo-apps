@@ -174,6 +174,8 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:84px;text-align:left;background:var(--blue-soft);border-color:var(--blue)}
 .tbtn b{font-size:17px}.tbtn span{font-family:var(--font-num);color:var(--muted);font-size:14px}
 .imLines{max-height:34dvh;overflow:auto;margin:8px 0;padding-right:4px}
+.ln.booked{grid-template-columns:auto 1fr auto auto}
+.ln .addBtn{min-width:44px;min-height:40px;padding:0;font-size:22px;font-weight:700;border-radius:10px;border:2px solid var(--accent);color:var(--accent);background:var(--surface)}
 .imLines .ln{grid-template-columns:auto 1fr auto}
 .imLines .ln.on{background:var(--warn-soft);border-radius:8px;padding:4px 6px}
 .imLines .qty b small{font-size:13px;color:var(--muted);font-weight:400}
@@ -833,7 +835,11 @@ function renderSide(){const s=$("side"),t=tabs[cur],dr=draftOf(cur);
   if(t){box.insertAdjacentHTML("beforeend",`<div class="grp">Boniert</div>`);
     t.lines.forEach(l=>{const d=document.createElement("div");d.className="ln booked";
       d.innerHTML=`<span class="qn">${l.qty}×</span><div><div class="t">${esc(lineName(l))}${isFood(l)&&(l.gang||1)>1?` <span class="gTag">${l.gang}. Gang</span>`:""}</div>${l.note?`<div class="sub">${esc(l.note)}</div>`:""}</div><div class="p">${eur(l.qty*l.price)}</div>`;
-      box.append(d);});
+      const ab=document.createElement("button");ab.className="addBtn";ab.textContent="+";ab.title="Noch einmal bestellen";
+      ab.onclick=()=>{const n=Object.assign(clone(l),{qty:1});if(isFood(n))n.gang=gangSel||1;else delete n.gang;
+        const dl=drafts[cur]||(drafts[cur]=[]),same=dl.find(x=>sameLine(x,n));if(same)same.qty++;else dl.push(n);
+        saveDrafts();renderSide();};
+      d.append(ab);box.append(d);});
     const pend=[...new Set(t.lines.filter(isFood).map(l=>l.gang||1))].filter(g=>g>1).sort();
     if(pend.length){const gb=document.createElement("div");gb.className="actions gangCall";
       for(const g of pend){const ok=(t.called||[]).includes(g),b=document.createElement("button");
