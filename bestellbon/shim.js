@@ -69,18 +69,19 @@ window.Android = {
     return [...m.values()].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0)).slice(0, 1000);
   }
   LC.setupSync({
-    keys: ['tische', 'bons', 'speisekarte', 'einstellungen'],
+    keys: ['tische', 'bons', 'speisekarte', 'einstellungen', 'tischplan'],
     special: { tische: mergeTabs, bons: mergeHist },
     // nicht abgleichen, während abgerechnet, umgesetzt oder die Karte/Einstellungen bearbeitet werden
     canSync: () => {
       if (typeof view === 'undefined') return true;
       const hid = (id) => { const e = document.getElementById(id); return !e || e.hidden; };
-      return !(view === 'tisch' && mode === 'pay') && view !== 'karte' && view !== 'einst' && hid('tpBox') && hid('imBox') && hid('chooser');
+      return !(typeof editing !== 'undefined' && editing) && !(view === 'tisch' && mode === 'pay') && view !== 'karte' && view !== 'einst' && hid('tpBox') && hid('imBox') && hid('chooser');
     },
     onChange: () => {
       hist = load('bons', []); tabs = load('tische', {});
       menu = load('speisekarte', null) || menu;
       cfg = Object.assign({}, cfg, load('einstellungen', {}));
+      try { if (applyPlan()) refreshPlanViews(); } catch (e) {}
       if (view === 'plan') renderPlan();
       else if (view === 'tisch') renderSide();
       else if (view === 'bons') renderHist();

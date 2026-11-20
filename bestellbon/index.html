@@ -126,6 +126,11 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tpT:active{filter:brightness(.9)}
 .tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);color:var(--muted);font-size:1.8cqw;border-radius:6px;opacity:.8}
 .tpD.small{font-size:0;border:none}
+.plan.edit,#v-plan .plan.edit{width:min(100%,860px)!important}
+.plan.edit .tpT,.plan.edit .tpD,.plan.edit .tpW{touch-action:none;cursor:grab}
+.plan.edit .tpD.small{font-size:1.4cqw;border:1.5px dashed var(--line)}
+.plan.edit .sel{outline:4px solid var(--warn);outline-offset:2px;z-index:5}
+.plan.edit .tpW{opacity:.6}
 .tpW{position:absolute;background:var(--muted);opacity:.35;border-radius:3px}
 .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}
 .legend i{display:inline-block;width:16px;height:16px;border-radius:4px;border:2px solid var(--accent);background:var(--surface);vertical-align:-3px;margin-right:6px}
@@ -287,6 +292,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
           <div class="pvSw" id="pvSw"><button data-pv="plan">Plan</button><button data-pv="liste">Liste</button></div>
           <button id="pMulti" class="mini">Tische zusammen</button>
           <button id="pFree" class="mini">Ohne Tisch / Abholung</button>
+          <button id="pEdit" class="mini">✎ Plan bearbeiten</button>
         </div>
       </div>
       <div class="bar" id="pMultiBar" hidden>
@@ -296,6 +302,20 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
       <div class="bar" id="pFreeBar" hidden>
         <input id="pFreeName" placeholder="z. B. Abholung Müller" autocomplete="off">
         <button id="pFreeCancel">Abbrechen</button><button id="pFreeOk" class="primary">Öffnen</button>
+      </div>
+      <div id="pEditBar" hidden>
+        <div class="bar">
+          <span class="note" style="flex:1">Ziehen zum Verschieben · antippen zum Auswählen</span>
+          <button id="eAddT">+ Tisch</button><button id="eAddW">+ Wand</button><button id="eAddD">+ Beschriftung</button>
+          <button id="eDone" class="primary">Fertig</button>
+        </div>
+        <div class="bar" id="eSelBar" hidden>
+          <input id="eName" autocomplete="off" style="max-width:150px;min-width:90px" aria-label="Name / Nummer">
+          <span class="note">Breite</span><button id="eW-">−</button><button id="eW+">+</button>
+          <span class="note">Höhe</span><button id="eH-">−</button><button id="eH+">+</button>
+          <button id="eRot">⟳ Drehen</button><button id="eDel" class="danger">Löschen</button>
+        </div>
+        <div class="actions" style="margin-top:6px"><button id="eReset" class="mini">Plan aus der Reservierung übernehmen</button></div>
       </div>
       <div class="msg" id="pMsg" role="status"></div>
       <div class="planWrap" id="planWrap"><div class="plan" id="plan"></div></div>
@@ -423,6 +443,7 @@ const PLAN_DEFAULT=[{"id":"33","area":"Innen","seats":2,"shape":"rect","x":20,"y
 /* Tischplan kommt aus der Reservierungs-App (ein Plan für beide); eingebauter Plan nur als Notlösung */
 let PLAN=PLAN_DEFAULT, TIDS=[], BB=null;
 const TA="Außer Haus",isTA=label=>tablesOf(label).includes(TA);
+let editing=false,eSel=null,EBB=null;   // Tischplan bearbeiten
 const A=window.Android||{
   load:k=>{try{return localStorage.getItem("bon_"+k)||"";}catch(e){return "";}},
   save:(k,v)=>{try{localStorage.setItem("bon_"+k,v);return true;}catch(e){return false;}},
@@ -507,7 +528,7 @@ function occupancy(){const map={};for(const k of openLabels())for(const id of ta
 let view="plan",cur=null,mode="order";
 const VIEWS=["plan","tisch","bons","karte","einst"];
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
-function show(v){view=v;document.body.dataset.view=v;const tv=v==="tisch"?"plan":v;
+function show(v){if(editing&&v!=="plan"){savePlan();editing=false;eSel=null;BB=calcBB();}view=v;document.body.dataset.view=v;const tv=v==="tisch"?"plan":v;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===tv));
   VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
   if(v==="plan")renderPlan(); if(v==="tisch")renderTisch(); if(v==="bons")renderHist(); if(v==="karte")renderEditor(); if(v==="einst")renderSettings();
@@ -559,7 +580,10 @@ function withTA(pl){if(pl.some(t=>String(t.id)===TA&&t.shape!=="deko"))return pl
   if(k)spot=[{x:k.x+k.w+G,y:k.y},{x:k.x-W-G,y:k.y},{x:k.x,y:k.y+k.h+G},{x:k.x+k.w+G,y:k.y+k.h-H}].find(c=>!hit(Object.assign({w:W,h:H},c)));
   if(!spot){const r=Math.max(...pl.map(t=>t.x+t.w));spot={x:r+G,y:Math.min(...pl.map(t=>t.y))};}
   return pl.concat([{id:TA,area:k?k.area:"Innen",seats:0,shape:"rect",x:spot.x,y:spot.y,w:W,h:H,takeaway:true}]);}
-function applyPlan(){const src=readResCache()||readResLocal(),pl=withTA(planFromRes(src)||PLAN_DEFAULT),sig=JSON.stringify(pl);
+/* Eigener Plan des Bestellbons (im Bestellbon bearbeitet). Solange keiner gespeichert ist: Plan der Reservierung. */
+const ownPlan=()=>{const p=load("tischplan",null);return Array.isArray(p)&&p.length?p:null;};
+function resPlan(){return planFromRes(readResCache()||readResLocal())||PLAN_DEFAULT;}
+function applyPlan(){if(editing)return false;const pl=withTA(ownPlan()||resPlan()),sig=JSON.stringify(pl);
   if(sig===planSig)return false;planSig=sig;PLAN=pl;TIDS=PLAN.filter(t=>t.shape!=="deko"&&!t.wall).map(t=>t.id);BB=calcBB();return true;}
 applyPlan();
 /* Plan der Reservierung von GitHub holen (gleicher Zugang wie der Abgleich) */
@@ -617,7 +641,10 @@ function fitT(){const g=$("tGrid");if(!g)return;
   const below=Math.max(0,document.body.offsetHeight-(top+g.offsetHeight));
   g.style.setProperty("--tH",Math.max(320,Math.floor(innerHeight-top-below-4))+"px");}
 window.addEventListener("orientationchange",()=>setTimeout(fitT,300));
-function renderPlan(){const map=occupancy(),labels=openLabels();
+function renderPlan(){renderEditBar();$("plan").classList.toggle("edit",editing);
+  if(editing){$("planWrap").hidden=false;$("tgrid").hidden=true;drawEdit($("plan"));requestAnimationFrame(fitPlan);return;}
+  $("plan").onpointerdown=null;
+  const map=occupancy(),labels=openLabels();
   const onTap=(id,k)=>{
     if(multi){if(k)return say(`Tisch ${id} ist schon besetzt.`,"err",$("pMsg"));
       if(id===TA)return say("„Außer Haus“ ist nur für Außer Haus und wird nicht zusammengelegt.","err",$("pMsg"));
@@ -635,6 +662,62 @@ function renderPlan(){const map=occupancy(),labels=openLabels();
     b.innerHTML=`<b>${esc(k)}</b><span>${t?eur(total(t)+sumL(draftOf(k))):"noch nicht boniert"}</span>`;b.onclick=()=>openTable(k);ob.append(b);}
   const keys=Object.keys(tabs);
   $("pStat").textContent=keys.length?`${keys.length} offen · ${eur(keys.reduce((s,k)=>s+total(tabs[k]),0))}`:"Alle Tische frei";}
+/* ---------- Tischplan bearbeiten (eigener Plan des Bestellbons) ---------- */
+const SNAP=10,snap=v=>Math.round(v/SNAP)*SNAP;
+const isTable=t=>t.shape!=="deko"&&!t.wall;
+function editBB(){const P=80,x0=Math.min(0,...PLAN.map(t=>t.x))-P,y0=Math.min(0,...PLAN.map(t=>t.y))-P,
+  x1=Math.max(...PLAN.map(t=>t.x+t.w))+P+60,y1=Math.max(...PLAN.map(t=>t.y+t.h))+P+60;return {x0,y0,w:x1-x0,h:y1-y0};}
+function savePlan(){save("tischplan",PLAN.map(t=>{const o=Object.assign({},t);delete o.label;return o;}));
+  planSig=JSON.stringify(PLAN);TIDS=PLAN.filter(isTable).map(t=>t.id);}
+function startEdit(){multi=false;msel=[];$("pFreeBar").hidden=true;
+  if(planView!=="plan"){planView="plan";try{localStorage.setItem("bon_planView","plan");}catch(e){}}
+  PLAN=clone(PLAN);editing=true;eSel=null;EBB=editBB();BB=EBB;renderPlan();}
+function endEdit(){savePlan();editing=false;eSel=null;BB=calcBB();renderPlan();say("Tischplan gespeichert.","ok",$("pMsg"));}
+function drawEdit(box){box.textContent="";box.classList.add("edit");
+  box.style.setProperty("--ar",(BB.w/BB.h).toFixed(4));box.style.aspectRatio=BB.w+"/"+BB.h;
+  for(const t of PLAN){const el=document.createElement("div");
+    if(t.wall){pos(el,t);el.className="tpW";}
+    else if(t.shape==="deko"){pos(el,t);el.className="tpD"+(t.w<60||t.h<60?" small":"");el.textContent=t.id;}
+    else{pos(el,t,3);el.className="tpT"+(t.id===TA?" ta":"");el.innerHTML=`<b>${t.id===TA?"Außer<br>Haus":esc(t.id)}</b>`;}
+    if(t===eSel)el.classList.add("sel");
+    let st=null;
+    el.onpointerdown=e=>{e.preventDefault();el.setPointerCapture(e.pointerId);st={cx:e.clientX,cy:e.clientY,x:t.x,y:t.y,moved:false};};
+    el.onpointermove=e=>{if(!st)return;const k=BB.w/box.clientWidth,dx=(e.clientX-st.cx)*k,dy=(e.clientY-st.cy)*k;
+      if(!st.moved&&Math.hypot(e.clientX-st.cx,e.clientY-st.cy)<6)return;st.moved=true;
+      t.x=snap(st.x+dx);t.y=snap(st.y+dy);pos(el,t,isTable(t)?3:0);};
+    el.onpointerup=()=>{if(!st)return;const m=st.moved;st=null;if(m){savePlan();EBB=editBB();BB=EBB;}eSel=t;renderPlan();};
+    el.onpointercancel=()=>{st=null;};
+    box.append(el);}
+  box.onpointerdown=e=>{if(e.target===box){eSel=null;renderPlan();}};}
+function renderEditBar(){$("pEditBar").hidden=!editing;$("pEdit").hidden=editing;$("pMulti").hidden=editing;$("pFree").hidden=editing;$("pvSw").hidden=editing;
+  if(!editing)return;const t=eSel;$("eSelBar").hidden=!t;if(!t)return;
+  $("eName").value=t.wall?"Wand":t.id;$("eName").disabled=!!t.wall||t.id===TA;$("eDel").disabled=t.id===TA;}
+const occupied=id=>!!occupancy()[id];
+function addItem(o){const ys=PLAN.map(t=>t.y+t.h),b=Math.max(0,...ys);
+  const it=Object.assign({area:"Innen",x:snap((BB.x0+BB.w/2)-o.w/2),y:snap(Math.min(b+20,BB.y0+BB.h-o.h-20))},o);
+  PLAN.push(it);eSel=it;savePlan();EBB=editBB();BB=EBB;renderPlan();}
+$("eAddT").onclick=()=>{const nums=PLAN.filter(isTable).map(t=>parseInt(t.id)).filter(n=>!isNaN(n)&&n<90);
+  let n=(nums.length?Math.max(...nums):0)+1;while(PLAN.some(t=>String(t.id)===String(n)))n++;
+  addItem({id:String(n),seats:2,shape:"rect",w:70,h:70});};
+$("eAddW").onclick=()=>{let i=1;while(PLAN.some(t=>t.id==="Wand "+i))i++;addItem({id:"Wand "+i,seats:0,shape:"deko",wall:true,w:150,h:10});};
+$("eAddD").onclick=()=>{const n=(prompt("Beschriftung, z. B. Bar oder Terrasse:")||"").trim();if(!n)return;
+  if(PLAN.some(t=>t.id===n))return say("Den Namen gibt es schon.","err",$("pMsg"));addItem({id:n,seats:0,shape:"deko",w:120,h:70});};
+$("eName").onchange=()=>{const t=eSel;if(!t||t.wall||t.id===TA)return;const v=$("eName").value.trim();
+  if(!v||v===t.id)return renderPlan();
+  if(PLAN.some(x=>x!==t&&String(x.id)===v)){say(`„${v}“ gibt es schon.`,"err",$("pMsg"));return renderPlan();}
+  if(isTable(t)&&occupied(t.id)){say(`Tisch ${t.id} ist gerade besetzt – erst abrechnen, dann umbenennen.`,"err",$("pMsg"));return renderPlan();}
+  if(isTable(t)&&/[^\w.-]/.test(v)){say("Tischnummer bitte nur aus Zahlen/Buchstaben, ohne Leerzeichen.","err",$("pMsg"));return renderPlan();}
+  t.id=v;savePlan();say("","",$("pMsg"));renderPlan();};
+const resize=(k,d)=>{const t=eSel;if(!t)return;const min=t.wall?10:30;t[k]=Math.max(min,t[k]+d);savePlan();EBB=editBB();BB=EBB;renderPlan();};
+$("eW-").onclick=()=>resize("w",-10);$("eW+").onclick=()=>resize("w",10);
+$("eH-").onclick=()=>resize("h",-10);$("eH+").onclick=()=>resize("h",10);
+$("eRot").onclick=()=>{const t=eSel;if(!t)return;[t.w,t.h]=[t.h,t.w];savePlan();EBB=editBB();BB=EBB;renderPlan();};
+$("eDel").onclick=()=>{const t=eSel;if(!t||t.id===TA)return;
+  if(isTable(t)&&occupied(t.id))return say(`Tisch ${t.id} ist gerade besetzt – erst abrechnen.`,"err",$("pMsg"));
+  PLAN=PLAN.filter(x=>x!==t);eSel=null;savePlan();renderPlan();};
+$("eReset").onclick=()=>{if(!confirm("Eigenen Plan verwerfen und den Plan der Reservierung übernehmen?"))return;
+  PLAN=withTA(clone(resPlan()));eSel=null;savePlan();EBB=editBB();BB=EBB;renderPlan();};
+$("pEdit").onclick=startEdit;$("eDone").onclick=endEdit;
 $("pMulti").onclick=()=>{multi=!multi;msel=[];$("pFreeBar").hidden=true;renderPlan();};
 $("pMultiCancel").onclick=()=>{multi=false;msel=[];renderPlan();};
 $("pMultiOk").onclick=()=>{if(!msel.length)return;const l=labelFor(msel);multi=false;msel=[];openTable(l);};
