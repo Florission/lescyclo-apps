@@ -120,7 +120,8 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tpT.busy{background:var(--blue);border-color:var(--blue);color:#fff}
 .tpT.draft{background:var(--warn-soft);border-style:dashed;border-color:var(--warn);color:var(--fg)}
 .tpT.busy.draft{background:var(--blue);color:#fff;border-color:var(--warn);border-style:solid;box-shadow:0 0 0 3px var(--warn)}
-.tpT.ta b,.tpT.ta.busy b,.tpT.ta.draft b{font-size:2.6cqw;white-space:nowrap}
+.tpT.ta b,.tpT.ta.busy b,.tpT.ta.draft b{font-size:3.6cqw;line-height:1.05}
+.tgrid button.ta b{font-size:22px;text-align:center}
 .tpT.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tpT:active{filter:brightness(.9)}
 .tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);color:var(--muted);font-size:1.8cqw;border-radius:6px;opacity:.8}
@@ -552,7 +553,7 @@ function readResCache(){try{return JSON.parse(localStorage.getItem("bestellbon:p
 let planSig="";
 /* Tisch „Außer Haus“ (ohne Nummer). Gehört nur zum Bestellbon (nicht reservierbar), steht direkt neben der Küche. */
 function withTA(pl){if(pl.some(t=>String(t.id)===TA&&t.shape!=="deko"))return pl;
-  const k=pl.find(t=>t.shape==="deko"&&/k(ü|ue)che/i.test(t.id))||null,W=110,H=70,G=10;
+  const k=pl.find(t=>t.shape==="deko"&&/k(ü|ue)che/i.test(t.id))||null,W=150,H=130,G=10;
   const hit=c=>pl.some(t=>c.x<t.x+t.w&&c.x+W>t.x&&c.y<t.y+t.h&&c.y+H>t.y);
   let spot=null;
   if(k)spot=[{x:k.x+k.w+G,y:k.y},{x:k.x-W-G,y:k.y},{x:k.x,y:k.y+k.h+G},{x:k.x+k.w+G,y:k.y+k.h-H}].find(c=>!hit(Object.assign({w:W,h:H},c)));
@@ -592,14 +593,14 @@ function drawPlan(box,sel,map,onTap){box.textContent="";
     else if(t.shape==="deko"){pos(el,t);el.className="tpD"+(t.w<60||t.h<60?" small":"");el.textContent=t.id;}
     else{pos(el,t,3);const n=tInfo(t.id,map,sel);
       el.className="tpT"+n.cls+(t.id===TA?" ta":"");
-      el.innerHTML=`<b>${esc(t.id)}</b>`+(n.sub?`<small>${esc(n.sub)}</small>`:"")+(n.tm&&t.h>=70?`<i>${esc(n.tm)}</i>`:"");
+      el.innerHTML=`<b>${t.id===TA?"Außer<br>Haus":esc(t.id)}</b>`+(n.sub?`<small>${esc(n.sub)}</small>`:"")+(n.tm&&t.h>=70?`<i>${esc(n.tm)}</i>`:"");
       el.onclick=()=>onTap(t.id,n.k);}
     box.append(el);}}
 function drawList(box,sel,map,onTap){box.textContent="";
   const ids=[...TIDS].sort((a,b)=>String(a).localeCompare(String(b),"de",{numeric:true}));
   const busy=ids.filter(id=>map[id]),free=ids.filter(id=>!map[id]);
   const sec=(title,list)=>{if(!list.length)return;const h=document.createElement("div");h.className="tgH";h.textContent=title;box.append(h);
-    for(const id of list){const n=tInfo(id,map,sel),b=document.createElement("button");b.className=n.cls.trim();
+    for(const id of list){const n=tInfo(id,map,sel),b=document.createElement("button");b.className=(n.cls+(id===TA?" ta":"")).trim();
       b.innerHTML=`<b>${esc(id)}</b>`+(n.sub?`<small>${esc(n.sub)}${/^[\d.,]+$/.test(n.sub)?" €":""}</small>`:"")+(n.tm?`<i>${esc(n.tm)}</i>`:"");
       b.onclick=()=>onTap(id,n.k);box.append(b);}};
   sec("Besetzt",busy);sec("Frei",free);}
