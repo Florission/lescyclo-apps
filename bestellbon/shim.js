@@ -39,6 +39,7 @@ window.Android = {
   // Positionen am Tisch wie einen Zähler abgleichen: Menge = lokal + GitHub − letzter Stand
   // → auf zwei Geräten gleichzeitig boniert = beides auf der Rechnung, bezahlt/storniert = abgezogen
   function mergeTabs(b, l, r) {
+    const first = b === undefined;
     b = b || {}; l = l || {}; r = r || {};
     const out = {};
     for (const label of new Set([...Object.keys(l), ...Object.keys(r)])) {
@@ -49,7 +50,8 @@ window.Android = {
       const order = [...new Set([...((tl && tl.lines) || []), ...((tr && tr.lines) || [])].map(lineKey))];
       const lines = [];
       for (const k of order) {
-        const n = (ql.get(k) || 0) + (qr.get(k) || 0) - (qb.get(k) || 0);
+        // Ohne gemeinsamen Stand (neues Gerät / Daten gelöscht) nicht addieren, sonst verdoppelt sich alles
+        const n = first ? Math.max(ql.get(k) || 0, qr.get(k) || 0) : (ql.get(k) || 0) + (qr.get(k) || 0) - (qb.get(k) || 0);
         if (n > 0) lines.push(Object.assign(JSON.parse(JSON.stringify(proto.get(k))), { qty: n }));
       }
       if (!lines.length) continue;

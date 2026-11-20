@@ -86,13 +86,17 @@
     try {
       for (let attempt = 0; attempt < 3 && !ok; attempt++) {
         const r = await gh(APP + '.json');
-        let remote = null, sha = null;
+        let remote = null, sha = null, rrev = null;
         if (r.status !== 404) {
           if (!r.ok) throw new Error(r.status === 401 ? 'Token ungültig' : r.status === 404 ? 'Repo nicht gefunden' : 'GitHub ' + r.status);
-          const j = await r.json(); sha = j.sha; remote = (JSON.parse(b64d(j.content)) || {}).data || {};
+          const j = await r.json(), f = JSON.parse(b64d(j.content)) || {}; sha = j.sha; remote = f.data || {}; rrev = f.rev || null;
         }
         if (S.setup.canSync && !S.setup.canSync()) { setState('wait'); schedule(4000); return false; }
         // ab hier ohne Unterbrechung: frischen lokalen Stand lesen, zusammenführen, zurückschreiben
+        // Letzter Upload kam bei GitHub an, die Antwort aber nicht (App zu / Netz weg)? Dann ist er der gemeinsame Stand.
+        const pend = readJ('sync_pending');
+        if (pend && rrev && pend.rev === rrev) ls.set('sync_base', J(pend.data));
+        if (pend && (!rrev || pend.rev !== rrev) && remote) ls.set('sync_pending', '');
         const baseRaw = ls.get('sync_base'), first = !baseRaw;
         const base = first ? {} : JSON.parse(baseRaw), local = readLocal(), merged = {};
         for (const k of S.setup.keys) {
@@ -103,14 +107,21 @@
           const v = sp ? sp(b, local[k], rv) : mergeVal(b, local[k], rv);
           if (v !== undefined) merged[k] = v;
         }
-        if (!eq(merged, local)) { writeLocal(merged); try { S.setup.onChange && S.setup.onChange(); } catch (e) { console.error(e); } }
-        if (remote && eq(merged, remote)) { ls.set('sync_base', J(merged)); ok = true; break; }
-        const body = { message: APP + ' – Abgleich', content: b64e(J({ app: APP, v: 1, updated: new Date().toISOString(), data: merged })) };
+        if (!eq(merged, local)) {
+          writeLocal(merged);
+          // Dieses Gerät enthält jetzt den GitHub-Stand → der ist ab sofort der gemeinsame Stand (sonst zählt ein neuer Versuch doppelt)
+          if (remote) ls.set('sync_base', J(remote));
+          try { S.setup.onChange && S.setup.onChange(); } catch (e) { console.error(e); }
+        }
+        if (remote && eq(merged, remote)) { ls.set('sync_base', J(merged)); ls.set('sync_pending', ''); ok = true; break; }
+        const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        ls.set('sync_pending', J({ rev, data: merged }));
+        const body = { message: APP + ' – Abgleich', content: b64e(J({ app: APP, v: 1, rev, updated: new Date().toISOString(), data: merged })) };
         if (sha) body.sha = sha;
         const p = await gh(APP + '.json', { method: 'PUT', body: J(body) });
         if (p.status === 409 || p.status === 422) continue;   // anderes Gerät war schneller → neu abgleichen
         if (!p.ok) throw new Error(p.status === 403 || p.status === 401 ? 'kein Schreibrecht' : 'GitHub ' + p.status);
-        ls.set('sync_base', J(merged)); ok = true;
+        ls.set('sync_base', J(merged)); ls.set('sync_pending', ''); ok = true;
       }
       setState(ok ? 'ok' : 'err', ok ? '' : 'Konflikt – gleich nochmal');
       if (!ok) schedule(3000);
