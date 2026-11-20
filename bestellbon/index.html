@@ -120,7 +120,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tpT.busy{background:var(--blue);border-color:var(--blue);color:#fff}
 .tpT.draft{background:var(--warn-soft);border-style:dashed;border-color:var(--warn);color:var(--fg)}
 .tpT.busy.draft{background:var(--blue);color:#fff;border-color:var(--warn);border-style:solid;box-shadow:0 0 0 3px var(--warn)}
-.tpT.ta:not(.busy):not(.draft):not(.on){border-style:dashed;background:var(--warn-soft)}
+.tpT.ta b,.tpT.ta.busy b,.tpT.ta.draft b{font-size:2.6cqw;white-space:nowrap}
 .tpT.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tpT:active{filter:brightness(.9)}
 .tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);color:var(--muted);font-size:1.8cqw;border-radius:6px;opacity:.8}
@@ -421,6 +421,7 @@ const DEFAULT_MENU=[{"name":"Softdrinks","items":[{"nr":"","name":"Fritz","desc"
 const PLAN_DEFAULT=[{"id":"33","area":"Innen","seats":2,"shape":"rect","x":20,"y":0,"w":70,"h":70},{"id":"34","area":"Innen","seats":2,"shape":"rect","x":90,"y":0,"w":70,"h":70},{"id":"31","area":"Innen","seats":2,"shape":"rect","x":10,"y":100,"w":70,"h":70},{"id":"32","area":"Innen","seats":2,"shape":"rect","x":80,"y":100,"w":70,"h":70},{"id":"30","area":"Innen","seats":2,"shape":"rect","x":0,"y":180,"w":70,"h":70},{"id":"23","area":"Innen","seats":3,"shape":"rect","x":0,"y":280,"w":70,"h":70},{"id":"22","area":"Innen","seats":2,"shape":"rect","x":0,"y":410,"w":70,"h":70},{"id":"21","area":"Innen","seats":2,"shape":"rect","x":80,"y":410,"w":70,"h":70},{"id":"20","area":"Innen","seats":2,"shape":"rect","x":10,"y":550,"w":70,"h":70},{"id":"19","area":"Innen","seats":2,"shape":"rect","x":80,"y":550,"w":70,"h":70},{"id":"18","area":"Innen","seats":2,"shape":"rect","x":170,"y":550,"w":70,"h":70},{"id":"35","area":"Innen","seats":2,"shape":"rect","x":360,"y":10,"w":70,"h":70},{"id":"36","area":"Innen","seats":2,"shape":"rect","x":360,"y":140,"w":70,"h":70},{"id":"10","area":"Innen","seats":3,"shape":"rect","x":290,"y":350,"w":70,"h":140},{"id":"16","area":"Innen","seats":2,"shape":"rect","x":400,"y":480,"w":70,"h":70},{"id":"17","area":"Innen","seats":2,"shape":"rect","x":400,"y":550,"w":70,"h":70},{"id":"13","area":"Innen","seats":2,"shape":"rect","x":680,"y":350,"w":70,"h":70},{"id":"14","area":"Innen","seats":2,"shape":"rect","x":680,"y":420,"w":70,"h":70},{"id":"15","area":"Innen","seats":2,"shape":"rect","x":680,"y":510,"w":70,"h":70},{"id":"Küche","area":"Innen","seats":0,"shape":"deko","x":460,"y":0,"w":120,"h":190},{"id":"Wand 1","area":"Innen","seats":0,"shape":"deko","wall":true,"x":430,"y":0,"w":20,"h":240},{"id":"Wand 2","area":"Innen","seats":0,"shape":"deko","wall":true,"x":170,"y":250,"w":590,"h":10},{"id":"Wand 3","area":"Innen","seats":0,"shape":"deko","wall":true,"x":0,"y":250,"w":90,"h":10},{"id":"Wand 4","area":"Innen","seats":0,"shape":"deko","wall":true,"x":270,"y":280,"w":20,"h":90},{"id":"Wand 5","area":"Innen","seats":0,"shape":"deko","wall":true,"x":290,"y":330,"w":460,"h":20},{"id":"Wand 6","area":"Innen","seats":0,"shape":"deko","wall":true,"x":550,"y":570,"w":20,"h":60},{"id":"Pflanze","area":"Innen","seats":0,"shape":"deko","x":290,"y":300,"w":40,"h":40}], PW=1000, PH=625;
 /* Tischplan kommt aus der Reservierungs-App (ein Plan für beide); eingebauter Plan nur als Notlösung */
 let PLAN=PLAN_DEFAULT, TIDS=[], BB=null;
+const TA="Außer Haus",isTA=label=>tablesOf(label).includes(TA);
 const A=window.Android||{
   load:k=>{try{return localStorage.getItem("bon_"+k)||"";}catch(e){return "";}},
   save:(k,v)=>{try{localStorage.setItem("bon_"+k,v);return true;}catch(e){return false;}},
@@ -495,8 +496,8 @@ function printName(l,kitchen){const o=l.option?(OPT_PRINT[l.option]||l.option):"
   return nm+(l.variant?" "+l.variant:"")+(o?" · "+o:"")+ex;}
 
 /* Tische ↔ Bezeichnung „Tisch 21+22“ */
-function tablesOf(label){const m=String(label).match(/^Tisch\s+([\w.-]+(?:\s*\+\s*[\w.-]+)*)$/i);return m?m[1].split("+").map(s=>s.trim()):[];}
-const labelFor=ids=>"Tisch "+[...ids].sort((a,b)=>String(a).localeCompare(String(b),"de",{numeric:true})).join("+");
+function tablesOf(label){if(String(label).trim()===TA)return [TA];const m=String(label).match(/^Tisch\s+([\w.-]+(?:\s*\+\s*[\w.-]+)*)$/i);return m?m[1].split("+").map(s=>s.trim()):[];}
+const labelFor=ids=>ids.includes(TA)?TA:"Tisch "+[...ids].sort((a,b)=>String(a).localeCompare(String(b),"de",{numeric:true})).join("+");
 const draftOf=k=>drafts[k]||[];
 function openLabels(){return [...new Set([...Object.keys(tabs),...Object.keys(drafts).filter(k=>drafts[k].length)])];}
 function occupancy(){const map={};for(const k of openLabels())for(const id of tablesOf(k))map[id]=k;return map;}
@@ -549,10 +550,9 @@ function planFromRes(c){if(!c||!Array.isArray(c.tables)||!c.tables.length)return
 function readResLocal(){try{return JSON.parse(localStorage.getItem("reservierung:f_einstellungen")||"null");}catch(e){return null;}}
 function readResCache(){try{return JSON.parse(localStorage.getItem("bestellbon:plan_cache")||"null");}catch(e){return null;}}
 let planSig="";
-/* Tisch 99 = nur Außer Haus. Gehört nur zum Bestellbon (nicht reservierbar), steht direkt neben der Küche. */
-const TA="99",isTA=label=>tablesOf(label).includes(TA);
+/* Tisch „Außer Haus“ (ohne Nummer). Gehört nur zum Bestellbon (nicht reservierbar), steht direkt neben der Küche. */
 function withTA(pl){if(pl.some(t=>String(t.id)===TA&&t.shape!=="deko"))return pl;
-  const k=pl.find(t=>t.shape==="deko"&&/k(ü|ue)che/i.test(t.id))||null,W=70,H=70,G=10;
+  const k=pl.find(t=>t.shape==="deko"&&/k(ü|ue)che/i.test(t.id))||null,W=110,H=70,G=10;
   const hit=c=>pl.some(t=>c.x<t.x+t.w&&c.x+W>t.x&&c.y<t.y+t.h&&c.y+H>t.y);
   let spot=null;
   if(k)spot=[{x:k.x+k.w+G,y:k.y},{x:k.x-W-G,y:k.y},{x:k.x,y:k.y+k.h+G},{x:k.x+k.w+G,y:k.y+k.h-H}].find(c=>!hit(Object.assign({w:W,h:H},c)));
@@ -581,7 +581,6 @@ const pos=(el,t,g)=>{g=g||0;el.style.left=(t.x+g-BB.x0)/BB.w*100+"%";el.style.to
 function tInfo(id,map,sel){const k=map[id],tb=k&&tabs[k],dr=k&&draftOf(k).length,ids=k?tablesOf(k):[];
   const cls=(tb?" busy":"")+(dr?" draft":"")+(sel.includes(id)?" on":"");
   let sub="",tm="";
-  if(id===TA&&!k)sub="außer Haus";
   if(k){if(ids.length>1&&ids[0]!==id)sub="mit "+ids[0];
     else{sub=tb?eur(total(tb)+sumL(draftOf(k))).replace(" €",""):"neu";
       if(tb&&tb.opened)tm="seit "+hm(new Date(tb.opened));}}
@@ -620,7 +619,7 @@ window.addEventListener("orientationchange",()=>setTimeout(fitT,300));
 function renderPlan(){const map=occupancy(),labels=openLabels();
   const onTap=(id,k)=>{
     if(multi){if(k)return say(`Tisch ${id} ist schon besetzt.`,"err",$("pMsg"));
-      if(id===TA)return say("Tisch 99 ist nur für Außer Haus und wird nicht zusammengelegt.","err",$("pMsg"));
+      if(id===TA)return say("„Außer Haus“ ist nur für Außer Haus und wird nicht zusammengelegt.","err",$("pMsg"));
       msel=msel.includes(id)?msel.filter(x=>x!==id):[...msel,id];say("","",$("pMsg"));return renderPlan();}
     openTable(k||labelFor([id]));};
   const asList=planView==="liste";
