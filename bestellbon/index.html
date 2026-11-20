@@ -120,6 +120,7 @@ pre.bon{font-family:var(--font-num);font-size:12px;background:var(--bg);border-r
 .tpT.busy{background:var(--blue);border-color:var(--blue);color:#fff}
 .tpT.draft{background:var(--warn-soft);border-style:dashed;border-color:var(--warn);color:var(--fg)}
 .tpT.busy.draft{background:var(--blue);color:#fff;border-color:var(--warn);border-style:solid;box-shadow:0 0 0 3px var(--warn)}
+.tpT.ta:not(.busy):not(.draft):not(.on){border-style:dashed;background:var(--warn-soft)}
 .tpT.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .tpT:active{filter:brightness(.9)}
 .tpD{position:absolute;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);color:var(--muted);font-size:1.8cqw;border-radius:6px;opacity:.8}
@@ -548,7 +549,16 @@ function planFromRes(c){if(!c||!Array.isArray(c.tables)||!c.tables.length)return
 function readResLocal(){try{return JSON.parse(localStorage.getItem("reservierung:f_einstellungen")||"null");}catch(e){return null;}}
 function readResCache(){try{return JSON.parse(localStorage.getItem("bestellbon:plan_cache")||"null");}catch(e){return null;}}
 let planSig="";
-function applyPlan(){const src=readResCache()||readResLocal(),pl=planFromRes(src)||PLAN_DEFAULT,sig=JSON.stringify(pl);
+/* Tisch 99 = nur Außer Haus. Gehört nur zum Bestellbon (nicht reservierbar), steht direkt neben der Küche. */
+const TA="99",isTA=label=>tablesOf(label).includes(TA);
+function withTA(pl){if(pl.some(t=>String(t.id)===TA&&t.shape!=="deko"))return pl;
+  const k=pl.find(t=>t.shape==="deko"&&/k(ü|ue)che/i.test(t.id))||null,W=70,H=70,G=10;
+  const hit=c=>pl.some(t=>c.x<t.x+t.w&&c.x+W>t.x&&c.y<t.y+t.h&&c.y+H>t.y);
+  let spot=null;
+  if(k)spot=[{x:k.x+k.w+G,y:k.y},{x:k.x-W-G,y:k.y},{x:k.x,y:k.y+k.h+G},{x:k.x+k.w+G,y:k.y+k.h-H}].find(c=>!hit(Object.assign({w:W,h:H},c)));
+  if(!spot){const r=Math.max(...pl.map(t=>t.x+t.w));spot={x:r+G,y:Math.min(...pl.map(t=>t.y))};}
+  return pl.concat([{id:TA,area:k?k.area:"Innen",seats:0,shape:"rect",x:spot.x,y:spot.y,w:W,h:H,takeaway:true}]);}
+function applyPlan(){const src=readResCache()||readResLocal(),pl=withTA(planFromRes(src)||PLAN_DEFAULT),sig=JSON.stringify(pl);
   if(sig===planSig)return false;planSig=sig;PLAN=pl;TIDS=PLAN.filter(t=>t.shape!=="deko"&&!t.wall).map(t=>t.id);BB=calcBB();return true;}
 applyPlan();
 /* Plan der Reservierung von GitHub holen (gleicher Zugang wie der Abgleich) */
@@ -571,6 +581,7 @@ const pos=(el,t,g)=>{g=g||0;el.style.left=(t.x+g-BB.x0)/BB.w*100+"%";el.style.to
 function tInfo(id,map,sel){const k=map[id],tb=k&&tabs[k],dr=k&&draftOf(k).length,ids=k?tablesOf(k):[];
   const cls=(tb?" busy":"")+(dr?" draft":"")+(sel.includes(id)?" on":"");
   let sub="",tm="";
+  if(id===TA&&!k)sub="außer Haus";
   if(k){if(ids.length>1&&ids[0]!==id)sub="mit "+ids[0];
     else{sub=tb?eur(total(tb)+sumL(draftOf(k))).replace(" €",""):"neu";
       if(tb&&tb.opened)tm="seit "+hm(new Date(tb.opened));}}
@@ -581,7 +592,7 @@ function drawPlan(box,sel,map,onTap){box.textContent="";
     if(t.wall){pos(el,t);el.className="tpW";}
     else if(t.shape==="deko"){pos(el,t);el.className="tpD"+(t.w<60||t.h<60?" small":"");el.textContent=t.id;}
     else{pos(el,t,3);const n=tInfo(t.id,map,sel);
-      el.className="tpT"+n.cls;
+      el.className="tpT"+n.cls+(t.id===TA?" ta":"");
       el.innerHTML=`<b>${esc(t.id)}</b>`+(n.sub?`<small>${esc(n.sub)}</small>`:"")+(n.tm&&t.h>=70?`<i>${esc(n.tm)}</i>`:"");
       el.onclick=()=>onTap(t.id,n.k);}
     box.append(el);}}
@@ -609,6 +620,7 @@ window.addEventListener("orientationchange",()=>setTimeout(fitT,300));
 function renderPlan(){const map=occupancy(),labels=openLabels();
   const onTap=(id,k)=>{
     if(multi){if(k)return say(`Tisch ${id} ist schon besetzt.`,"err",$("pMsg"));
+      if(id===TA)return say("Tisch 99 ist nur für Außer Haus und wird nicht zusammengelegt.","err",$("pMsg"));
       msel=msel.includes(id)?msel.filter(x=>x!==id):[...msel,id];say("","",$("pMsg"));return renderPlan();}
     openTable(k||labelFor([id]));};
   const asList=planView==="liste";
@@ -1005,7 +1017,14 @@ function kitchenBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W
     if(l.note){inv(1);wrap(">> "+l.note,W2-2).forEach(x=>{n(" "+x+" ");nl();});inv(0);}
     bold(0);sz(0);nl();}
   n("=".repeat(W));nl();
+  if(o.takeaway||isTA(o.label)){nl();al(1);b.push(...circledL());nl();al(0);}
   b.push(ESC,0x45,0,GS,0x21,0,ESC,0x64,6,GS,0x56,66,0);return b;}
+/* Außer-Haus-Zeichen: dickes L im Kreis als Rasterbild (GS v 0), ca. 2,5 cm */
+function circledL(){const S=200,R=S/2,RO=R-2,RI=RO-18,BW=S/8,d=new Array(BW*S).fill(0);
+  const inL=(x,y)=>(x>=72&&x<102&&y>=48&&y<152)||(x>=72&&x<136&&y>=122&&y<152);
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){const r=Math.hypot(x+.5-R,y+.5-R);
+    if((r<=RO&&r>=RI)||inL(x,y))d[y*BW+(x>>3)]|=0x80>>(x&7);}
+  return [0x1d,0x76,0x30,0,BW&255,BW>>8,S&255,S>>8,...d];}
 /* Getränkebon: separat, gleiche Schriftgröße wie der Küchenbon */
 function drinkBytes(o,when){const ESC=0x1b,GS=0x1d,W=parseInt(cfg.width)||48,W2=Math.floor(W/2),W3=Math.floor(W/3);
   const b=[ESC,0x40,ESC,0x74,19],n=s=>b.push(...enc(s)),nl=()=>b.push(0x0a);
