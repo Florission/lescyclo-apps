@@ -382,8 +382,8 @@ window.onBack=()=>{if(view!=="tag")show("tag");else if(editId){resetForm();goTod
 $("dPrev").onclick=()=>{day=addDays(day,-1);syncFormDate();renderDay();};
 $("dNext").onclick=()=>{day=addDays(day,1);syncFormDate();renderDay();};
 $("dToday").onclick=()=>{day=todayIso();syncFormDate();renderDay();};
-/* Zurück zum heutigen Tag (nach Reservierung fertig / App-Wechsel) */
-function goToday(){day=todayIso();if(view!=="tag")show("tag");if(!editId)$("fDate").value=day;renderTables();renderDay();}
+/* Nach Reservierung fertig: auf dem gewählten Tag bleiben (heute nur nach Neustart der App) */
+function goToday(){if(view!=="tag")show("tag");if(!editId)$("fDate").value=day;renderTables();renderDay();}
 function syncFormDate(){if(!editId){$("fDate").value=day;renderTables();}}
 const dayRes=d=>res.filter(r=>r.date===d).sort((a,b)=>a.time.localeCompare(b.time)||a.created.localeCompare(b.created));
 
@@ -1072,15 +1072,7 @@ function makeDraggable(){
 /* um Mitternacht (und beim Öffnen) zurück auf den Grundplan */
 setInterval(expire,60*1000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)expire();});
-/* Nach Wechsel in eine andere App: zurück auf heute – außer eine Reservierung wird gerade eingegeben oder verschoben */
-(function(){let away=false;
-  const back=()=>{if(!away)return;away=false;
-    const d=document.getElementById("resDrawer");
-    if((d&&!d.hidden)||document.body.classList.contains("mvMode"))return;
-    goToday();};
-  document.addEventListener("visibilitychange",()=>{if(document.hidden)away=true;else back();});
-  window.addEventListener("pagehide",()=>{away=true;});
-  window.addEventListener("pageshow",e=>{if(e.persisted){away=true;back();}});})();
+/* App-Wechsel: Tag bleibt erhalten – erst nach dem Schließen der App startet sie wieder mit heute */
 expire();renderTables();
 })();
 </script>
